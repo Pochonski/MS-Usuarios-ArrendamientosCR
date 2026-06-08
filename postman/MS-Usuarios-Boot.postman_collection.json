@@ -158,6 +158,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "// Guard: si test_email esta vacio, fallar con mensaje claro ANTES de pegar al backend.",
+                  "// Si no, el backend responde 400 'correo: must not be blank' que confunde al usuario.",
+                  "const testEmail = pm.environment.get('test_email') || pm.collectionVariables.get('test_email');",
+                  "if (!testEmail || testEmail.trim() === '') {",
+                  "  pm.expect.fail('test_email esta vacio. Editar el env activo (azure-swa) y setear test_email a un correo unico (ej: postman+tu-nombre@ejemplo.com). En newman CLI: --env-var \"test_email=...\"');",
+                  "}",
                   "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
                   "const body = pm.response.json();",
                   "pm.test('Body tiene token (string no vacío)', () => {",
@@ -251,6 +257,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "// Guard: si test_email esta vacio, fallar con mensaje claro ANTES de pegar al backend.",
+                  "// Si no, el backend responde 400 'correo: must not be blank' que confunde al usuario.",
+                  "const testEmail = pm.environment.get('test_email') || pm.collectionVariables.get('test_email');",
+                  "if (!testEmail || testEmail.trim() === '') {",
+                  "  pm.expect.fail('test_email esta vacio. Editar el env activo (azure-swa) y setear test_email a un correo unico (ej: postman+tu-nombre@ejemplo.com). En newman CLI: --env-var \"test_email=...\"');",
+                  "}",
                   "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));",
                   "const body = pm.response.json();",
                   "pm.test('Mensaje indica correo ya registrado', () => {",
@@ -337,6 +349,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "// Guard: si test_email esta vacio, fallar con mensaje claro ANTES de pegar al backend.",
+                  "// Si no, el backend responde 400 'correo: must not be blank' que confunde al usuario.",
+                  "const testEmail = pm.environment.get('test_email') || pm.collectionVariables.get('test_email');",
+                  "if (!testEmail || testEmail.trim() === '') {",
+                  "  pm.expect.fail('test_email esta vacio. Editar el env activo (azure-swa) y setear test_email a un correo unico (ej: postman+tu-nombre@ejemplo.com). En newman CLI: --env-var \"test_email=...\"');",
+                  "}",
                   "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
                   "pm.test('Body tiene token', () => pm.expect(body).to.have.property('token'));",
@@ -384,6 +402,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "// Guard: si test_email esta vacio, fallar con mensaje claro ANTES de pegar al backend.",
+                  "// Si no, el backend responde 400 'correo: must not be blank' que confunde al usuario.",
+                  "const testEmail = pm.environment.get('test_email') || pm.collectionVariables.get('test_email');",
+                  "if (!testEmail || testEmail.trim() === '') {",
+                  "  pm.expect.fail('test_email esta vacio. Editar el env activo (azure-swa) y setear test_email a un correo unico (ej: postman+tu-nombre@ejemplo.com). En newman CLI: --env-var \"test_email=...\"');",
+                  "}",
                   "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));",
                   "const body = pm.response.json();",
                   "pm.test('Body indica credenciales inválidas', () => pm.expect(body.message).to.match(/inv/));",

@@ -128,6 +128,8 @@ newman run postman/MS-Usuarios-Boot.postman_collection.json \
 
 > ⚠️ **Desde 2026-06-08 el App Service está linkeado como backend del SWA**. El identity provider `Azure Static Web Apps (Linked)` rechaza tráfico directo al App Service. Para Newman contra prod, **usar siempre `azure-swa.postman_environment.json`**. El `azure.postman_environment.json` solo sirve para debugging local/después de unlink.
 
+> ℹ️ **Variable `test_email`**: los 4 environments (`azure-swa`, `azure`, `local`, `node`) tienen un valor default `postman+manual@postman-test.com`. Si corrés la collection en **Postman UI** sin cambiarlo, vas a usar ese email — si ya existe en la BD, el 02.2 va a fallar con 409 (esperado) y 02.4 va a tirar 401 hasta que cambies `test_email` a algo único. Los tests 02.1/02.2/02.4/02.5 tienen un guard que falla con mensaje claro si `test_email` está vacío.
+
 > ℹ️ El `base_url` por default en la collection apunta al SWA (`https://agreeable-ground-0b1436910.6.azurestaticapps.net`), así que si abrís la collection sin seleccionar un env, igual funciona vía el proxy `/api/*` del SWA.
 
 ## 🔐 Sobre los secretos
