@@ -1,6 +1,6 @@
 # Postman Collection - MS-Usuarios Boot
 
-Colección completa de Postman para el microservicio `MS-Usuarios-Boot` (Spring Boot 3.3 + Java 21 + arquitectura hexagonal). Cubre los 15 endpoints públicos de la API (8 de auth + 3 de usuarios + health + 2 OpenAPI).
+Colección completa de Postman para el microservicio `MS-Usuarios-Boot` (Spring Boot 3.3 + Java 21 + arquitectura hexagonal). Cubre los 16 endpoints públicos de la API (9 de auth incluyendo GitHub + 3 de usuarios + health + 2 OpenAPI).
 
 ## 📦 Archivos
 
@@ -83,9 +83,14 @@ La colección está organizada en 6 secciones numeradas. **Ejecutá los requests
 - `05.9 DELETE /api/usuario/{otro}` - Verifica 403
 - `05.10 DELETE /api/usuario/{propio}` - ⚠️ **Elimina el usuario creado en 02.1**
 
-### 6️⃣ `06. OpenAPI / Swagger` - Documentación auto-generada
-- `06.1 OpenAPI 3 JSON spec` - `/v3/api-docs`
-- `06.2 Swagger UI` - `/swagger-ui.html`
+### 6️⃣ `06. Auth - GitHub OAuth` - Login con GitHub (Authorization Code flow)
+- `06.1 POST /api/auth/github con body válido` - ⚠️ **Request de documentación, no ejecutable en CI.** El `code` real solo se obtiene via el redirect flow de GitHub OAuth App (`https://github.com/login/oauth/authorize?client_id=...&redirect_uri=...&scope=read:user+user:email` → callback en el SPA → backend canjea el code por access_token). El test script acepta 200 (con `code` real) o 400 (con `code` dummy/expirado) y valida la shape del body en ambos casos.
+- `06.2 POST /api/auth/github con body vacío` - Verifica 400 (`@NotBlank` en `code` y `redirectUri`)
+- `06.3 POST /api/auth/github con code inválido` - Verifica 400 (el adapter tira `IllegalArgumentException` cuando GitHub rechaza el code)
+
+### 7️⃣ `07. OpenAPI / Swagger` - Documentación auto-generada
+- `07.1 OpenAPI 3 JSON spec` - `/v3/api-docs`
+- `07.2 Swagger UI` - `/swagger-ui.html`
 
 ## 🧪 Ejecutar toda la colección (CLI)
 
@@ -137,6 +142,8 @@ Esta colección **NO** contiene credenciales en el environment. Los secretos (DB
 | 429 en login | Demasiados intentos fallidos | Esperar 15 min o usar otro correo |
 | Connection refused (local) | App no está corriendo | `mvn spring-boot:run` o `docker compose up` |
 | 502/503 (Azure) | App en startup o Key Vault caído | Esperar 1-2 min para arranque, verificar KV en Azure Portal |
+| 400 en `06.1` (GitHub) | Estás usando un `{{github_code}}` placeholder (esperado) | Reemplazar por un `code` real. Para obtenerlo: en el browser, abrir `https://github.com/login/oauth/authorize?client_id=<GITHUB_CLIENT_ID>&redirect_uri=http://localhost:5173/auth/github/callback&scope=read:user+user:email`, autorizar la app, copiar el `code` del redirect URI. |
+| 400 en `06.1` con `code` real + mensaje "email público" | El perfil de GitHub del usuario tiene el email en privado | El usuario debe hacerlo público en https://github.com/settings/emails (o el adapter podría usar el endpoint `/user/emails` si está configurado — ver `AppProperties.github().useEmailsEndpoint()`). |
 
 ## ✅ Estado de validación (Newman CLI vs Azure)
 

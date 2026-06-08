@@ -48,7 +48,7 @@ class MetricsEndpointTest {
 
     @Test
     void healthEndpointExponeEstado() throws Exception {
-        mockMvc.perform(get("/actuator/health"))
+        mockMvc.perform(get("/api/actuator/health"))
                 .andExpect(status().isOk());
     }
 

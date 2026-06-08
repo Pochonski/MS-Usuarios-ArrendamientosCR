@@ -88,14 +88,17 @@ app:
       - /api/health
       - /api/docs
       - /api/docs/**
-      - /v3/api-docs/**
-      - /swagger-ui/**
-      - /swagger-ui.html
-      - /actuator/health
+      - /api/v3/api-docs
+      - /api/v3/api-docs/**
+      - /api/swagger-ui/**
+      - /api/swagger-ui.html
+      - /api/actuator/health
+      - /api/actuator/**
 
 management:
   endpoints:
     web:
+      base-path: /api/actuator
       exposure:
         include: health,info,metrics,prometheus
   endpoint:
@@ -124,6 +127,17 @@ management:
   azure:
     application-insights:
       connection-string: ${APPLICATIONINSIGHTS_CONNECTION_STRING:}
+
+# OpenAPI / Swagger UI — movidos bajo /api/ para que el proxy del SWA
+# (`/api/*` → App Service) los pueda alcanzar. Sin esto, /v3/api-docs y
+# /swagger-ui.html caen en el navigationFallback del SWA y devuelven el
+# shell de la SPA en vez del spec JSON / la UI de Swagger.
+springdoc:
+  api-docs:
+    path: /api/v3/api-docs
+  swagger-ui:
+    path: /api/swagger-ui.html
+    operations-sorter: method
 
 logging:
   level:

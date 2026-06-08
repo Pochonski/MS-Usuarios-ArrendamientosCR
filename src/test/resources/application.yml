@@ -63,12 +63,38 @@ app:
       - /api/health
       - /api/docs
       - /api/docs/**
-      - /v3/api-docs/**
-      - /swagger-ui/**
-      - /swagger-ui.html
-      - /actuator/**
+      - /api/v3/api-docs
+      - /api/v3/api-docs/**
+      - /api/swagger-ui/**
+      - /api/swagger-ui.html
+      - /api/actuator/**
     apim-filter-enabled: false
     rate-limit-enabled: false
+
+# Mirror prod config: actuator + OpenAPI/Swagger bajo /api/ para que el SWA
+# los pueda proxiar. En src/test/resources/application.yml REEMPLAZA al
+# src/main/resources/application.yml (no lo merge), así que hay que duplicarlo.
+management:
+  endpoints:
+    web:
+      base-path: /api/actuator
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+  health:
+    db:
+      enabled: true
+
+springdoc:
+  api-docs:
+    path: /api/v3/api-docs
+  swagger-ui:
+    path: /api/swagger-ui.html
+    operations-sorter: method
 
 logging:
   level:

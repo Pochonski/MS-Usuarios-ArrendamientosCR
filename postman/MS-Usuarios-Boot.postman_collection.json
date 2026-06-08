@@ -2,7 +2,7 @@
   "info": {
     "name": "MS-Usuarios Boot (Spring Boot 3 + Java 21)",
     "_postman_id": "ms-usuarios-boot-2026-06-08",
-    "description": "Colección completa de Postman para el microservicio MS-Usuarios Boot (Spring Boot 3.3 + Java 21 + arquitectura hexagonal). Cubre los 13 endpoints del servicio, con autenticación JWT, BCrypt y persistencia en Azure SQL Database. Esta colección es compatible 1:1 con la API original del servicio Node en `MS-Usuarios-Plataforma-Arrendamientos-CR`.\n\n**Endpoints incluidos:**\n- Health: /api/health, /actuator/health\n- Auth: login, registro, google, profile, refresh, logout, verify-email, send-verification-email\n- Usuarios: listar, obtener, actualizar, eliminar\n\n**Cómo usar:**\n1. Importar esta colección en Postman (botón `Import`)\n2. Importar también el archivo `azure.postman_environment.json`\n3. Seleccionar el environment `MS-Usuarios Azure`\n4. Empezar por `01. Health` → `02. Auth → Registro` (crea usuario y guarda JWT automáticamente)\n5. Todos los requests subsiguientes usan el JWT capturado",
+    "description": "Colección completa de Postman para el microservicio MS-Usuarios Boot (Spring Boot 3.3 + Java 21 + arquitectura hexagonal). Cubre los 17 endpoints del servicio (8 de auth + 3 de usuarios + health + 3 OpenAPI), con autenticación JWT, BCrypt y persistencia en Azure SQL Database. Esta colección es compatible 1:1 con la API original del servicio Node en `MS-Usuarios-Plataforma-Arrendamientos-CR`.\n\n**Endpoints incluidos:**\n- Health: /api/health, /api/actuator/health\n- Auth: login, registro, google, profile, refresh, logout, verify-email, send-verification-email\n- Usuarios: listar, obtener, actualizar, eliminar\n\n**Cómo usar:**\n1. Importar esta colección en Postman (botón `Import`)\n2. Importar también el archivo `azure.postman_environment.json`\n3. Seleccionar el environment `MS-Usuarios Azure`\n4. Empezar por `01. Health` → `02. Auth → Registro` (crea usuario y guarda JWT automáticamente)\n5. Todos los requests subsiguientes usan el JWT capturado",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -112,16 +112,17 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/actuator/health",
+              "raw": "{{base_url}}/api/actuator/health",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "actuator",
                 "health"
               ]
             },
-            "description": "Spring Boot Actuator health (formato JSON nativo). NOTA: El SWA solo proxia /api/* al App Service, no /actuator/*. Si la base_url apunta al SWA, este endpoint devuelve el index.html del SWA (200 OK, text/html). Para validar el body JSON, usar el environment azure.postman_environment.json con el backend deslinkeado."
+            "description": "Spring Boot Actuator health bajo /api/actuator/health (movido del default /actuator/health para que sea alcanzable vía el proxy /api/* del SWA). Formato JSON nativo. Con base_url apuntando al SWA, este endpoint se proxia correctamente al App Service y devuelve el JSON con `status: UP`."
           },
           "event": [
             {
@@ -130,17 +131,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "// El SWA solo proxia /api/* al App Service. /actuator/* NO está en el proxy,",
-                  "// así que cuando la base_url apunta al SWA, este endpoint devuelve el index.html del SWA (200 OK con HTML).",
-                  "// El test solo verifica que el endpoint es JSON cuando NO estamos vía SWA (azure env directo al App Service).",
                   "const ct = pm.response.headers.get('Content-Type') || '';",
-                  "const isJson = ct.includes('json');",
-                  "if (isJson) {",
-                  "  const body = pm.response.json();",
-                  "  pm.test('Body.status es UP', () => pm.expect(body.status).to.equal('UP'));",
-                  "} else {",
-                  "  pm.test('INFO: /actuator/health no es accesible vía SWA proxy (solo /api/* se proxia). Para validar el body JSON, usar el environment azure.postman_environment.json con el backend deslinkeado.', () => true);",
-                  "}"
+                  "pm.test('Content-Type es JSON', () => pm.expect(ct).to.include('json'));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body NO es HTML shell', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('<!DOCTYPE html>');",
+                  "});",
+                  "pm.test('Body es health status', () => {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "});"
                 ]
               }
             }
@@ -1250,10 +1249,176 @@
       ]
     },
     {
-      "name": "06. OpenAPI / Swagger",
+      "name": "06. Auth - GitHub OAuth",
       "item": [
         {
-          "name": "06.1 OpenAPI 3 JSON spec",
+          "name": "06.1 POST /api/auth/github con body válido (documentación)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"{{github_code}}\",\"redirectUri\":\"http://localhost:5173/auth/github/callback\",\"rol\":\"dueno\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/github",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "github"
+              ]
+            },
+            "description": "POST /api/auth/github con el body válido. ⚠️ Este request es de DOCUMENTACIÓN — no es ejecutable en CI porque el `code` de GitHub solo se obtiene via el redirect del Authorization Code flow (https://github.com/login/oauth/authorize?client_id=...&redirect_uri=...&scope=read:user+user:email → callback en el SPA → backend canjea code por access_token y obtiene email del usuario).\n\nBody shape esperado (DTO GitHubLoginRequest):\n- `code` (@NotBlank): el authorization code que GitHub devuelve al redirect_uri después de que el usuario autoriza\n- `redirectUri` (@NotBlank): la URI exacta registrada en GitHub OAuth App (debe coincidir con la del paso 1)\n- `rol` (opcional): RolUsuario al que se vincula la cuenta en el primer login. Si el usuario ya existe, se ignora. Valores: `dueno`, `inquilino`, `admin`.\n\nPara probarlo en Postman manualmente:\n1. Reemplazar `{{github_code}}` por un code real (o usar un cliente OAuth de Postman)\n2. Si el `code` es válido → 200 con `{token, refreshToken, user: {...}}`\n3. Si el `code` ya fue usado o expiró → 400 con `message: 'Código de GitHub inválido o expirado'`\n4. Si el perfil de GitHub no tiene email público → 400 con `message` conteniendo 'email público'\n5. Si el `code`/`redirectUri` están vacíos → 400 por validación @NotBlank (ver 06.2 y 06.3)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Acepta 200 (code real) o 400 (code dummy/vencido)', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Body tiene token', () => pm.expect(body).to.have.property('token'));",
+                  "  pm.test('Body tiene refreshToken', () => pm.expect(body).to.have.property('refreshToken'));",
+                  "  pm.test('Body tiene user', () => pm.expect(body).to.have.property('user'));",
+                  "  pm.environment.set('github_auth_token', body.token);",
+                  "} else {",
+                  "  pm.test('Body tiene message de error de GitHub', () => {",
+                  "    const json = JSON.stringify(pm.response.json()).toLowerCase();",
+                  "    pm.expect(json).to.match(/github|inválid|expirad|código/);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06.2 POST /api/auth/github con body vacío (debe dar 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/github",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "github"
+              ]
+            },
+            "description": "POST /api/auth/github con body JSON vacío. El DTO GitHubLoginRequest tiene @NotBlank en `code` y `redirectUri`, así que el backend responde 400 con error de validación. Análogo al caso 03.4 (Google con body vacío)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 (validación)', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "const json = JSON.stringify(body).toLowerCase();",
+                  "pm.test('Body referencia code, redirectUri o validation', () => pm.expect(json).to.match(/code|redirecturi|validation/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06.3 POST /api/auth/github con code inválido (debe dar 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"fake-invalid-code\",\"redirectUri\":\"http://localhost:5173/auth/github/callback\",\"rol\":\"dueno\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/github",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "github"
+              ]
+            },
+            "description": "POST /api/auth/github con un code inventado. El GitHubOAuthAdapter canjea el code contra https://github.com/login/oauth/access_token; como el code no existe, GitHub responde con error y el adapter tira IllegalArgumentException que el ControllerAdvice mapea a 400. Análogo al caso 03.5 (Google con token inválido)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 (code GitHub inválido)', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "const json = JSON.stringify(body).toLowerCase();",
+                  "pm.test('Mensaje indica code de GitHub inválido', () => pm.expect(json).to.match(/github|inválid|expirad|código/));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07. OpenAPI / Swagger",
+      "item": [
+        {
+          "name": "07.1 OpenAPI 3 JSON spec",
           "request": {
             "method": "GET",
             "header": [],
@@ -1261,16 +1426,17 @@
               "type": "noauth"
             },
             "url": {
-              "raw": "{{base_url}}/v3/api-docs",
+              "raw": "{{base_url}}/api/v3/api-docs",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "v3",
                 "api-docs"
               ]
             },
-            "description": "OpenAPI 3 spec generada automáticamente por springdoc-openapi. Endpoint público."
+            "description": "OpenAPI 3 spec (JSON) bajo /api/v3/api-docs (movido del default /v3/api-docs para que sea alcanzable vía el proxy /api/* del SWA). Generado automáticamente por springdoc-openapi. Endpoint público."
           },
           "event": [
             {
@@ -1279,24 +1445,22 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "// Detección de proxy SWA: el SWA proxia /api/* pero no /v3/* ni /swagger-ui*, devuelve index.html",
                   "const ct = pm.response.headers.get('Content-Type') || '';",
-                  "const isSwaProxy = !ct.includes('json') && pm.response.text().includes('<!DOCTYPE html>');",
-                  "if (isSwaProxy) {",
-                  "  pm.test('INFO: /v3/api-docs no es accesible vía SWA proxy (solo /api/* se proxia). Para validar el spec, usar el environment azure.postman_environment.json con el backend deslinkeado.', () => true);",
-                  "} else {",
-                  "  pm.test('Content-Type es JSON', () => pm.expect(ct).to.include('json'));",
-                  "  const body = pm.response.json();",
-                  "  pm.test('Spec tiene OpenAPI 3', () => pm.expect(body).to.have.property('openapi'));",
-                  "  pm.test('Spec tiene paths', () => pm.expect(body).to.have.property('paths'));",
-                  "}"
+                  "pm.test('Content-Type es JSON', () => pm.expect(ct).to.include('json'));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body NO es HTML shell', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('<!DOCTYPE html>');",
+                  "});",
+                  "pm.test('Body es OpenAPI spec', () => {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "});"
                 ]
               }
             }
           ]
         },
         {
-          "name": "06.2 Swagger UI",
+          "name": "07.2 Swagger UI",
           "request": {
             "method": "GET",
             "header": [],
@@ -1304,15 +1468,16 @@
               "type": "noauth"
             },
             "url": {
-              "raw": "{{base_url}}/swagger-ui.html",
+              "raw": "{{base_url}}/api/swagger-ui.html",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "swagger-ui.html"
               ]
             },
-            "description": "Swagger UI en HTML. Redirige a /swagger-ui/index.html. Endpoint público."
+            "description": "Swagger UI HTML bajo /api/swagger-ui.html (movido del default /swagger-ui.html para que sea alcanzable vía el proxy /api/* del SWA). Redirige a /api/swagger-ui/index.html. Endpoint público."
           },
           "event": [
             {
@@ -1322,6 +1487,11 @@
                 "exec": [
                   "pm.test('Status 200 OK o 302 redirect', () => {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200, 302]);",
+                  "});",
+                  "const body = pm.response.text();",
+                  "pm.test('NO es el shell de la SPA', () => {",
+                  "  const isSpaShell = body.includes('Plataforma de Arrendamientos CR') && body.includes('/assets/index-');",
+                  "  pm.expect(isSpaShell, 'Response es el shell de la SPA, no Swagger UI').to.equal(false);",
                   "});"
                 ]
               }

@@ -7,10 +7,11 @@ app:
       - /api/auth/github
       - /api/auth/verify-email/**
       - /api/health
-      - /v3/api-docs/**
-      - /swagger-ui/**
-      - /swagger-ui.html
-      - /actuator/health
+      - /api/v3/api-docs/**
+      - /api/swagger-ui/**
+      - /api/swagger-ui.html
+      - /api/actuator/health
+      - /api/actuator/**
 
 logging:
   level:
