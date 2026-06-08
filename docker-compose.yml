@@ -35,7 +35,10 @@ services:
       sqlserver:
         condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: dev
+      # W3.3: usar perfil local-sqlserver (con ddl-auto=validate + physical_naming_strategy
+      # para preservar case de @Table). El perfil "dev" está pensado para H2 en memoria;
+      # combinado con DB_HOST=sqlserver causaba fallos de schema validation.
+      SPRING_PROFILES_ACTIVE: local-sqlserver
       DB_HOST: sqlserver
       DB_PORT: 1433
       DB_NAME: usuarios_db

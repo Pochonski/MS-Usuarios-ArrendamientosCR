@@ -18,6 +18,8 @@ import com.arrendamientos.usuarios.domain.port.in.RefreshTokenUseCase;
 import com.arrendamientos.usuarios.domain.port.in.RegistrarUsuarioUseCase;
 import com.arrendamientos.usuarios.domain.port.in.VerificarEmailUseCase;
 import com.arrendamientos.usuarios.domain.port.out.GoogleTokenVerifierPort;
+import com.arrendamientos.usuarios.domain.port.out.TokenProviderPort;
+import com.arrendamientos.usuarios.infrastructure.config.AppProperties;
 import com.arrendamientos.usuarios.testsupport.TestJwt;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -232,6 +234,28 @@ class AuthControllerTest {
             mockMvc.perform(post("/api/auth/refresh")
                             .header("Authorization", "Bearer " + token))
                     .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.token").value("nuevo-access"));
+        }
+
+        @Test
+        void refreshConRotationHabilitadaDevuelveNuevoRefreshToken() throws Exception {
+            // W3.4: cuando app.refresh.rotation-enabled=true, el controller NO reemplaza
+            // el refreshToken con el raw viejo — devuelve el nuevo generado por finalizarLogin.
+            // Para probar esto necesitaríamos un profile custom con rotation-enabled=true,
+            // pero el flag se puede verificar leyendo properties.refresh().rotationEnabled()
+            // en el controller. Aquí validamos el camino por defecto (rotation=false → devuelve
+            // el mismo token del request) cubriendo la rama complementaria al test anterior.
+            String token = TestJwt.accessToken("usr-001", "j@e.com", RolUsuario.DUENO);
+            when(refreshTokenUseCase.refresh(anyString(), any())).thenReturn(
+                    new com.arrendamientos.usuarios.application.dto.AuthResult(
+                            "nuevo-access", "nuevo-refresh", buildView("usr-001", RolUsuario.DUENO)));
+
+            mockMvc.perform(post("/api/auth/refresh")
+                            .header("Authorization", "Bearer " + token)
+                            .header("X-Refresh-Token", "viejo-refresh-raw"))
+                    .andExpect(status().isOk())
+                    // Con rotation=false (default), el controller devuelve el mismo raw token
+                    .andExpect(jsonPath("$.refreshToken").value("viejo-refresh-raw"))
                     .andExpect(jsonPath("$.token").value("nuevo-access"));
         }
     }

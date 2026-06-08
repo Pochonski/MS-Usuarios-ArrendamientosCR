@@ -1,0 +1,65 @@
+# Perfil local-sqlserver: usado por docker-compose cuando se quiere
+# levantar la app contra el SQL Server 2022 del compose (no H2).
+# - Mantiene ddl-auto: validate (igual que dev/prod) para que las
+#   migraciones de Flyway se apliquen y la validación Hibernate corra.
+# - El secreto JWT es el mismo que usa el dev profile.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # Preservar el case original de @Table(name="...") en vez de lowercasing
+        physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        jdbc.time_zone: UTC
+        format_sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 3
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: local-dev-secret-change-me-please-32-chars-min
+    expires-in: 24h
+    refresh-expires-in: 7d
+    email-verification-expires-in: 24h
+  google:
+    client-id: ""
+    allowed-domain: ""
+  email-verification:
+    frontend-base-url: http://localhost:5173
+  cors:
+    allowed-origins:
+      - "*"
+  lockout:
+    max-attempts: 5
+    duration-minutes: 15
+  token-revocation:
+    cleanup-after-days: 7
+  bcrypt:
+    strength: 4
+  security:
+    apim-filter-enabled: false
+    rate-limit-enabled: false
+    endpoints-public:
+      - /api/auth/**
+      - /api/health
+      - /api/v3/api-docs/**
+      - /api/swagger-ui/**
+      - /api/swagger-ui.html
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /swagger-ui.html
+      - /actuator/**
+  email:
+    provider: logging
+    from-address: DoNotReply@localhost
+    from-display-name: ""
+
+logging:
+  level:
+    root: DEBUG
+    com.arrendamientos.usuarios: DEBUG
+    org.hibernate.SQL: DEBUG

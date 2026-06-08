@@ -22,7 +22,8 @@ public record AppProperties(
         TokenRevocation tokenRevocation,
         Bcrypt bcrypt,
         Security security,
-        Email email
+        Email email,
+        Refresh refresh
 ) {
 
     public record Jwt(
@@ -83,5 +84,14 @@ public record AppProperties(
             String connectionString,
             @NotBlank String fromAddress,
             String fromDisplayName
+    ) {}
+
+    /**
+     * Refresh token rotation: cuando está habilitado, /api/auth/refresh
+     * genera un NUEVO refresh token (no reutiliza el viejo). Breaking change
+     * para clientes que asumen que el refresh no cambia — opt-in por defecto.
+     */
+    public record Refresh(
+            boolean rotationEnabled
     ) {}
 }

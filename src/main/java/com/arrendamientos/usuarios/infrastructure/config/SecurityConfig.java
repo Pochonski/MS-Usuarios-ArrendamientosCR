@@ -59,6 +59,8 @@ public class SecurityConfig {
                 "X-Refresh-Token"
         ));
         config.setExposedHeaders(List.of("Authorization"));
+        // W3.5: cache preflight 1h en el browser → evita OPTIONS en cada request
+        config.setMaxAge(3600L);
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }

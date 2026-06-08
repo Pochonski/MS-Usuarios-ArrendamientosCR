@@ -279,6 +279,7 @@ public class UsuarioService implements
     public AuthResult refresh(String userId, String refreshJti) {
         Usuario usuario = usuarios.porId(userId)
                 .orElseThrow(() -> new CredencialesInvalidasException("Usuario no encontrado"));
+        // Siempre revocamos el JTI viejo (esto ya estaba)
         if (refreshJti != null) {
             tokensRevocados.revocar(refreshJti, null);
         }
@@ -294,6 +295,11 @@ public class UsuarioService implements
             );
         }
         metrics.tokenRefresh();
+        // W3.4: si la rotation está habilitada, finalizarLogin() ya genera un nuevo
+        // refresh (mismo método que login/registro). En este momento
+        // finalizarLogin() SIEMPRE genera uno nuevo, así que el flag solo se usa
+        // en el controller para decidir si incluir el nuevo refresh token en la response.
+        // TODO: refactor para que el service devuelva refreshToken actual vs nuevo.
         return finalizarLogin(usuario);
     }
 
@@ -320,7 +326,9 @@ public class UsuarioService implements
 
     @Override
     @Transactional(readOnly = true)
+    @Deprecated(forRemoval = true, since = "1.0.6")
     public List<UsuarioView> listarTodos() {
+        // ⚠️ DEPRECATED: trunca silenciosamente a 1000 usuarios. Usar listarPaginado.
         return usuarios.paginado(1, 1000).stream().map(Usuario::aView).toList();
     }
 

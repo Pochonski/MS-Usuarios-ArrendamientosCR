@@ -148,7 +148,11 @@ public class AuthController {
             summary = "Refrescar token de acceso",
             description = "Genera un nuevo access token a partir del refresh token. " +
                     "El refresh token puede enviarse en el body como 'refreshToken' o en el header 'X-Refresh-Token'. " +
-                    "Si el JTI fue revocado (logout), retorna 401."
+                    "Si el JTI fue revocado (logout), retorna 401.\n\n" +
+                    "**Refresh rotation** (opt-in, app.refresh.rotation-enabled=true): " +
+                    "si está habilitada, este endpoint también genera un NUEVO refresh token y revoca el viejo. " +
+                    "El cliente DEBE reemplazar el refresh token guardado con el nuevo que viene en la response. " +
+                    "Default: false (comportamiento legacy, el refresh token no cambia)."
     )
     public ResponseEntity<LoginResponseDto> refresh(
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -168,6 +172,13 @@ public class AuthController {
             }
         }
         AuthResult r = refreshTokenUseCase.refresh(user.id(), refreshJti);
+        // W3.4: si la rotation está deshabilitada, devolver null en el refreshToken
+        // (el cliente sigue usando el viejo). El access token siempre se renueva.
+        if (!properties.refresh().rotationEnabled()) {
+            // Comportamiento legacy: reusar el mismo refresh token
+            // (null en el response → cliente mantiene el suyo)
+            r = new AuthResult(r.token(), raw, r.user());
+        }
         return ResponseEntity.ok(LoginResponseDto.from(r));
     }
 

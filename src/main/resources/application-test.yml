@@ -16,6 +16,12 @@ app:
       - /swagger-ui/**
       - /swagger-ui.html
       - /actuator/**
+  email:
+    provider: logging
+    from-address: test@example.com
+    from-display-name: "Test"
+  refresh:
+    rotation-enabled: false
 
 logging:
   level:

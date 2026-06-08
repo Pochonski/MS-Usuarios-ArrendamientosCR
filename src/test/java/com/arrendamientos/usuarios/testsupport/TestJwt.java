@@ -33,7 +33,8 @@ public final class TestJwt {
                 new AppProperties.TokenRevocation(7),
                 new AppProperties.Bcrypt(4),
                 new AppProperties.Security(List.of()),
-                new AppProperties.Email("logging", "", "test@example.com", "Test")
+                new AppProperties.Email("logging", "", "test@example.com", "Test"),
+                new AppProperties.Refresh(false)
         ));
     }
 

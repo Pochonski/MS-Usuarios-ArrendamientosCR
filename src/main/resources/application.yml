@@ -94,6 +94,10 @@ app:
     connection-string: ${AZURE_COMM_CONNECTION_STRING:}
     from-address: ${AZURE_COMM_FROM_ADDRESS:DoNotReply@azurecomm.net}
     from-display-name: ${AZURE_COMM_FROM_NAME:Plataforma de Arrendamientos CR}
+  # Ola 3 (W3.4): refresh token rotation. opt-in porque es breaking change
+  # para clientes que asumen que el refresh no cambia.
+  refresh:
+    rotation-enabled: ${REFRESH_ROTATION_ENABLED:false}
 
 management:
   endpoints:
