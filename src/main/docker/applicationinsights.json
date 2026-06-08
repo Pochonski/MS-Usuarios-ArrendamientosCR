@@ -1,0 +1,16 @@
+{
+  "instrumentation": {
+    "logging": { "level": "INFO" },
+    "micrometer": { "enabled": true },
+    "jdbc": { "enabled": true }
+  },
+  "sampling": {
+    "percentage": 100
+  },
+  "metricIntervalSeconds": 60,
+  "customDimensions": {
+    "service.name": "arrendamientos-ms-users-boot",
+    "service.version": "1.0.2",
+    "deployment.environment": "azure-centralus"
+  }
+}
