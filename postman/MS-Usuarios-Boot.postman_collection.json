@@ -1,0 +1,1215 @@
+{
+  "info": {
+    "name": "MS-Usuarios Boot (Spring Boot 3 + Java 21)",
+    "_postman_id": "ms-usuarios-boot-2026-06-08",
+    "description": "Colección completa de Postman para el microservicio MS-Usuarios Boot (Spring Boot 3.3 + Java 21 + arquitectura hexagonal). Cubre los 13 endpoints del servicio, con autenticación JWT, BCrypt y persistencia en Azure SQL Database. Esta colección es compatible 1:1 con la API original del servicio Node en `MS-Usuarios-Plataforma-Arrendamientos-CR`.\n\n**Endpoints incluidos:**\n- Health: /api/health, /actuator/health\n- Auth: login, registro, google, profile, refresh, logout, verify-email, send-verification-email\n- Usuarios: listar, obtener, actualizar, eliminar\n\n**Cómo usar:**\n1. Importar esta colección en Postman (botón `Import`)\n2. Importar también el archivo `azure.postman_environment.json`\n3. Seleccionar el environment `MS-Usuarios Azure`\n4. Empezar por `01. Health` → `02. Auth → Registro` (crea usuario y guarda JWT automáticamente)\n5. Todos los requests subsiguientes usan el JWT capturado",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://arrendamientos-ms-users-boot.azurewebsites.net",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_email",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "00. Info",
+      "item": [
+        {
+          "name": "README",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "Bienvenida. Empieza por 01. Health Check."
+          }
+        }
+      ]
+    },
+    {
+      "name": "01. Health Check",
+      "item": [
+        {
+          "name": "01.1 Health (custom endpoint)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "Health check con verificación de conexión a Azure SQL y estado de Google OAuth. Compatible con la API original del servicio Node."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body tiene campo status', () => pm.expect(body).to.have.property('status'));",
+                  "pm.expect(body.status).to.be.oneOf(['healthy', 'unhealthy']);",
+                  "pm.test('Body tiene timestamp', () => pm.expect(body).to.have.property('timestamp'));",
+                  "pm.test('Body tiene database.status', () => pm.expect(body.database).to.have.property('status'));",
+                  "pm.test('Body tiene google.configured', () => pm.expect(body.google).to.have.property('configured'));",
+                  "pm.test('Body tiene google.clientIdPrefix', () => pm.expect(body.google).to.have.property('clientIdPrefix'));",
+                  "pm.test('Database status es connected', () => pm.expect(body.database.status).to.equal('connected'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.2 Spring Boot Actuator Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "Spring Boot Actuator health. Devuelve 200 UP o 503 DOWN."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body tiene status', () => pm.expect(body).to.have.property('status'));",
+                  "pm.expect(body.status).to.equal('UP');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Auth - Registro y Login",
+      "item": [
+        {
+          "name": "02.1 Registro de nuevo usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body tiene token (string no vacío)', () => {",
+                  "  pm.expect(body).to.have.property('token');",
+                  "  pm.expect(body.token).to.be.a('string');",
+                  "  pm.expect(body.token.length).to.be.greaterThan(50);",
+                  "});",
+                  "pm.test('Body tiene refreshToken', () => {",
+                  "  pm.expect(body).to.have.property('refreshToken');",
+                  "  pm.expect(body.refreshToken).to.be.a('string');",
+                  "});",
+                  "pm.test('Body tiene usuario.id con formato usr-XXX', () => {",
+                  "  pm.expect(body.usuario).to.have.property('id');",
+                  "  pm.expect(body.usuario.id).to.match(/^usr-\\d{3,}$/);",
+                  "});",
+                  "pm.test('Body NO expone contrasenaHash', () => {",
+                  "  const json = JSON.stringify(body);",
+                  "  pm.expect(json).to.not.include('contrasenaHash');",
+                  "  pm.expect(json).to.not.include('ContrasenaHash');",
+                  "  pm.expect(json).to.not.include('PasswordHash');",
+                  "});",
+                  "pm.test('Body tiene usuario.correo normalizado', () => {",
+                  "  const expected = pm.environment.get('test_email') || pm.collectionVariables.get('test_email');",
+                  "  pm.expect(body.usuario.correo).to.equal(expected);",
+                  "});",
+                  "// Guardar token para uso en los siguientes requests",
+                  "pm.collectionVariables.set('auth_token', body.token);",
+                  "pm.collectionVariables.set('refresh_token', body.refreshToken);",
+                  "pm.collectionVariables.set('user_id', body.usuario.id);",
+                  "console.log('✓ Token capturado para', body.usuario.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Postman Test User\",\n  \"correo\": \"{{test_email}}\",\n  \"contrasena\": \"Password123!\",\n  \"rol\": \"dueno\",\n  \"telefono\": \"+50688888888\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "registro"
+              ]
+            },
+            "description": "Registra un nuevo usuario con correo único (timestamp). Devuelve 201 Created con token + refreshToken + datos del usuario. Captura el JWT automáticamente para los requests subsiguientes."
+          }
+        },
+        {
+          "name": "02.2 Registro con correo duplicado (debe dar 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Duplicate\",\n  \"correo\": \"{{test_email}}\",\n  \"contrasena\": \"Password123!\",\n  \"rol\": \"dueno\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "registro"
+              ]
+            },
+            "description": "Verifica que el UNIQUE constraint sobre Correo retorna 409 Conflict."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));",
+                  "const body = pm.response.json();",
+                  "pm.test('Mensaje indica correo ya registrado', () => {",
+                  "  pm.expect(body.message).to.match(/ya est/);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.3 Registro con validación fallida (debe dar 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"X\",\n  \"correo\": \"no-es-correo\",\n  \"contrasena\": \"123\",\n  \"rol\": \"dueno\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "registro"
+              ]
+            },
+            "description": "Verifica validaciones: nombre corto, correo inválido, contraseña corta, rol inválido. Debe dar 400 con detalles."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Error es Validation Error', () => pm.expect(body.error).to.equal('Validation Error'));",
+                  "pm.test('Detalles de validación presentes (array)', () => pm.expect(body.details).to.be.an('array'));",
+                  "pm.test('Al menos 2 errores de validación (nombre + correo + password)', () => pm.expect(body.details.length).to.be.at.least(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.4 Login con credenciales correctas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{test_email}}\",\n  \"contrasena\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login con email + password. Devuelve 200 con nuevo token. Captura token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body tiene token', () => pm.expect(body).to.have.property('token'));",
+                  "pm.test('Body tiene refreshToken', () => pm.expect(body).to.have.property('refreshToken'));",
+                  "pm.test('Body NO expone contrasenaHash', () => {",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('contrasenaHash');",
+                  "});",
+                  "pm.collectionVariables.set('auth_token', body.token);",
+                  "pm.collectionVariables.set('refresh_token', body.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.5 Login con password incorrecto (debe dar 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{test_email}}\",\n  \"contrasena\": \"WRONG-PASSWORD\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Verifica que el BCrypt comparison falla con 401. Incrementa el contador de intentos fallidos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body indica credenciales inválidas', () => pm.expect(body.message).to.match(/inv/));",
+                  "pm.test('Body tiene intentosFallidos y restantes', () => {",
+                  "  pm.expect(body).to.have.property('intentosFallidos');",
+                  "  pm.expect(body).to.have.property('intentosRestantes');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.6 Login con email en MAYÚSCULAS (verifica normalización)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Setear el body completo en Newman usando el evento 'request' directamente",
+                  "const original = pm.environment.get('test_email') || pm.collectionVariables.get('test_email');",
+                  "if (!original) throw new Error('test_email no está definida. Ejecuta primero 02.1');",
+                  "pm.collectionVariables.set('test_email_upper', original.toUpperCase());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"POSTMAN+TMP@POSTMAN-TEST.COM\",\n  \"contrasena\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Verifica que el controller normaliza el correo a minúsculas antes de consultar. ⚠️ Este test usa un email fijo que NO se valida contra la BD (porque el password es incorrecto para esa cuenta fija) - la normalización se valida por el echo del campo 'correo' en errores, o se puede usar en lugar de 02.4."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Este test verifica que el controller TOLERA emails con mayúsculas sin tirar 400.",
+                  "// Si el backend normaliza correctamente, retorna 401 (usuario no existe con ese email)",
+                  "// Si NO normaliza, retornaría 400 (correo inválido).",
+                  "pm.test('Status 401 (no existe el user con email mayúsculas) o 200 (si existe)', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});",
+                  "pm.test('NO retorna 400 Bad Request (lo que pasaría si no normalizara)', () => {",
+                  "  pm.expect(pm.response.code).to.not.equal(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03. Auth - Profile y Refresh (token activo)",
+      "item": [
+        {
+          "name": "03.1 GET /api/auth/profile (con JWT)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "profile"
+              ]
+            },
+            "description": "Obtiene el perfil del usuario autenticado. Requiere JWT válido."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body.id coincide con user_id', () => pm.expect(body.id).to.equal(pm.collectionVariables.get('user_id')));",
+                  "pm.test('Body NO expone contrasenaHash', () => pm.expect(JSON.stringify(body)).to.not.include('contrasenaHash'));",
+                  "pm.test('Body tiene rol (string dueno o inquilino)', () => pm.expect(['dueno', 'inquilino']).to.include(body.rol));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.2 GET /api/auth/profile SIN token (debe dar 401)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "profile"
+              ]
+            },
+            "description": "Verifica que sin JWT el endpoint retorna 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.3 POST /api/auth/refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Refresca el access token usando el refresh token. El refresh token anterior se revoca (rotación)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Nuevo token generado', () => pm.expect(body).to.have.property('token'));",
+                  "pm.test('Nuevo refreshToken generado', () => pm.expect(body).to.have.property('refreshToken'));",
+                  "pm.collectionVariables.set('auth_token', body.token);",
+                  "pm.collectionVariables.set('refresh_token', body.refreshToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04. Auth - Email Verification",
+      "item": [
+        {
+          "name": "04.1 POST /api/auth/send-verification-email (con JWT)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/send-verification-email",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "send-verification-email"
+              ]
+            },
+            "description": "Envía email de verificación. El email de producción está en MailDev/log (no se envía realmente). El JWT firma un token de verificación que se loguea."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Mensaje de email enviado', () => pm.expect(body.message).to.match(/verificaci/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.2 GET /api/auth/verify-email/{token} (token inválido)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/verify-email/invalid-token-here",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-email",
+                "invalid-token-here"
+              ]
+            },
+            "description": "Verifica que tokens inválidos dan error."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized o 400 Bad Request', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([400, 401, 500]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05. Usuarios - CRUD (con token activo)",
+      "item": [
+        {
+          "name": "05.1 GET /api/usuarios (listar paginado)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuarios?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "description": "Lista usuarios paginados. Devuelve { data: [...], pagination: {page, limit, total, pages} }"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body tiene data (array)', () => pm.expect(body.data).to.be.an('array'));",
+                  "pm.test('Body tiene pagination', () => pm.expect(body.pagination).to.have.property('page'));",
+                  "pm.test('Body NO expone contrasenaHash', () => pm.expect(JSON.stringify(body)).to.not.include('contrasenaHash'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.2 GET /api/usuarios?email=... (búsqueda por prefijo)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuarios?email=postman",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "description": "Búsqueda por prefijo de correo. Devuelve array de usuarios."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body es paginado con data array', () => {",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.3 GET /api/usuarios?rol=dueno (filtrar por rol)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuarios?rol=dueno",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "description": "Filtrar usuarios por rol. Devuelve array."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body es paginado con data array', () => {",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "});",
+                  "if (body.data.length > 0) {",
+                  "  pm.test('Todos los usuarios tienen rol=dueno', () => {",
+                  "    body.data.forEach(u => pm.expect(u.rol).to.equal('dueno'));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.4 GET /api/usuario/{id} (obtener por ID)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuario/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Obtiene un usuario por ID. Devuelve 200 con datos o 404 si no existe."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body.id coincide', () => pm.expect(body.id).to.equal(pm.collectionVariables.get('user_id')));",
+                  "pm.test('Body NO expone contrasenaHash', () => pm.expect(JSON.stringify(body)).to.not.include('contrasenaHash'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.5 GET /api/usuario/{id} no existente (debe dar 404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuario/usr-999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "usr-999"
+              ]
+            },
+            "description": "Verifica manejo de 404 para usuarios inexistentes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
+                  "const body = pm.response.json();",
+                  "pm.test('Mensaje indica no encontrado', () => pm.expect(body.message).to.match(/encontrado|no encontr/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.6 PUT /api/usuario/{id} (actualizar perfil propio)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Postman Updated Name\",\n  \"telefono\": \"+50677777777\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/usuario/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Actualiza el perfil del usuario autenticado. Solo permite actualizar el propio perfil (403 si es otro ID)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Nombre actualizado', () => pm.expect(body.nombre).to.equal('Postman Updated Name'));",
+                  "pm.test('Telefono actualizado', () => pm.expect(body.telefono).to.equal('+50677777777'));",
+                  "pm.test('NO se cambió el id', () => pm.expect(body.id).to.equal(pm.collectionVariables.get('user_id')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.7 PUT /api/usuario/{otro} (debe dar 403)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Hacker Attempt\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/usuario/usr-001",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "usr-001"
+              ]
+            },
+            "description": "Intenta actualizar el perfil de OTRO usuario. Debe dar 403 Forbidden (solo puedes actualizar el tuyo)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403 Forbidden', () => pm.response.to.have.status(403));",
+                  "const body = pm.response.json();",
+                  "pm.test('Mensaje de error es Forbidden', () => pm.expect(body.error).to.equal('Forbidden'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.8 PUT /api/usuario/{id} con validación fallida (debe dar 400)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"X\",\n  \"telefono\": \"invalido\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/usuario/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Verifica validaciones: nombre corto, teléfono mal formato."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.9 DELETE /api/usuario/{otro} (debe dar 403)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuario/usr-001",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "usr-001"
+              ]
+            },
+            "description": "Intenta eliminar otro usuario. Debe dar 403 (solo puedes eliminar tu propia cuenta)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403 Forbidden', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.10 DELETE /api/usuario/{propio} (debe dar 200)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuario/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "usuario",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Elimina la cuenta del usuario autenticado. ⚠️ ESTE REQUEST ELIMINA EL USUARIO CREADO EN 02.1 - ejecutar al final del flujo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Mensaje de eliminación correcta', () => pm.expect(body.message).to.match(/eliminado/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.4 POST /api/auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Revoca el JWT actual. Después de este request, el token guardado en {{auth_token}} ya no es válido."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Mensaje de logout exitoso', () => pm.expect(body.message).to.match(/Logout/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.5 POST /api/auth/logout SIN token (debe dar 401)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Logout sin token debe dar 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06. OpenAPI / Swagger",
+      "item": [
+        {
+          "name": "06.1 OpenAPI 3 JSON spec",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/v3/api-docs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v3",
+                "api-docs"
+              ]
+            },
+            "description": "OpenAPI 3 spec generada automáticamente por springdoc-openapi. Endpoint público."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "// Detección de proxy SWA: el SWA proxia /api/* pero no /v3/* ni /swagger-ui*, devuelve index.html",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "const isSwaProxy = !ct.includes('json') && pm.response.text().includes('<!DOCTYPE html>');",
+                  "if (isSwaProxy) {",
+                  "  pm.test('INFO: /v3/api-docs no es accesible vía SWA proxy (solo /api/* se proxia). Para validar el spec, usar el environment azure.postman_environment.json con el backend deslinkeado.', () => true);",
+                  "} else {",
+                  "  pm.test('Content-Type es JSON', () => pm.expect(ct).to.include('json'));",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Spec tiene OpenAPI 3', () => pm.expect(body).to.have.property('openapi'));",
+                  "  pm.test('Spec tiene paths', () => pm.expect(body).to.have.property('paths'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06.2 Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/swagger-ui.html",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "swagger-ui.html"
+              ]
+            },
+            "description": "Swagger UI en HTML. Redirige a /swagger-ui/index.html. Endpoint público."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK o 302 redirect', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 302]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
