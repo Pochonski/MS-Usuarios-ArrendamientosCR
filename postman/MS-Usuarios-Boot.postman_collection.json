@@ -50,6 +50,9 @@
           "name": "README",
           "request": {
             "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/health",
@@ -112,6 +115,9 @@
           "name": "01.1 Health (custom endpoint)",
           "request": {
             "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/health",
@@ -149,6 +155,9 @@
           "name": "01.2 Spring Boot Actuator Health",
           "request": {
             "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/actuator/health",
@@ -247,6 +256,9 @@
           ],
           "request": {
             "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
             "header": [
               {
                 "key": "Content-Type",
@@ -275,6 +287,9 @@
           "name": "02.2 Registro con correo duplicado (debe dar 409)",
           "request": {
             "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
             "header": [
               {
                 "key": "Content-Type",
@@ -332,6 +347,9 @@
           "name": "02.3 Registro con validación fallida (debe dar 400)",
           "request": {
             "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
             "header": [
               {
                 "key": "Content-Type",
@@ -375,6 +393,9 @@
           "name": "02.4 Login con credenciales correctas",
           "request": {
             "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
             "header": [
               {
                 "key": "Content-Type",
@@ -436,6 +457,9 @@
           "name": "02.5 Login con password incorrecto (debe dar 401)",
           "request": {
             "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
             "header": [
               {
                 "key": "Content-Type",
@@ -514,6 +538,9 @@
           ],
           "request": {
             "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
             "header": [
               {
                 "key": "Content-Type",
@@ -808,6 +835,9 @@
           "name": "04.2 GET /api/auth/verify-email/{token} (token inválido)",
           "request": {
             "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/auth/verify-email/invalid-token-here",
