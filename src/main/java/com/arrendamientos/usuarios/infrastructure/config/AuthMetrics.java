@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
  *   - auth.register.conflict
  *   - auth.google.success
  *   - auth.google.failure
+ *   - auth.github.success
+ *   - auth.github.failure
  *   - auth.account.locked
  *   - auth.token.refresh
  *   - auth.logout
@@ -28,6 +30,8 @@ public class AuthMetrics {
     private final Counter registerConflict;
     private final Counter googleSuccess;
     private final Counter googleFailure;
+    private final Counter githubSuccess;
+    private final Counter githubFailure;
     private final Counter accountLocked;
     private final Counter tokenRefresh;
     private final Counter logout;
@@ -51,6 +55,12 @@ public class AuthMetrics {
         this.googleFailure = Counter.builder("auth.google.failure")
                 .description("Failed Google OAuth attempts")
                 .register(registry);
+        this.githubSuccess = Counter.builder("auth.github.success")
+                .description("Successful GitHub OAuth logins")
+                .register(registry);
+        this.githubFailure = Counter.builder("auth.github.failure")
+                .description("Failed GitHub OAuth attempts")
+                .register(registry);
         this.accountLocked = Counter.builder("auth.account.locked")
                 .description("Account lockouts triggered by failed attempts")
                 .register(registry);
@@ -68,6 +78,8 @@ public class AuthMetrics {
     public void registerConflict() { registerConflict.increment(); }
     public void googleSuccess() { googleSuccess.increment(); }
     public void googleFailure() { googleFailure.increment(); }
+    public void githubSuccess() { githubSuccess.increment(); }
+    public void githubFailure() { githubFailure.increment(); }
     public void accountLocked() { accountLocked.increment(); }
     public void tokenRefresh() { tokenRefresh.increment(); }
     public void logout() { logout.increment(); }

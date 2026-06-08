@@ -36,6 +36,9 @@ public class UsuarioEntity {
     @Column(name = "GoogleId", length = 255)
     private String googleId;
 
+    @Column(name = "GitHubId")
+    private Long gitHubId;
+
     @Column(name = "FechaRegistro", nullable = false, columnDefinition = "datetime2")
     private Instant fechaRegistro;
 
@@ -71,6 +74,9 @@ public class UsuarioEntity {
 
     public String getGoogleId() { return googleId; }
     public void setGoogleId(String googleId) { this.googleId = googleId; }
+
+    public Long getGitHubId() { return gitHubId; }
+    public void setGitHubId(Long gitHubId) { this.gitHubId = gitHubId; }
 
     public Instant getFechaRegistro() { return fechaRegistro; }
     public void setFechaRegistro(Instant fechaRegistro) { this.fechaRegistro = fechaRegistro; }

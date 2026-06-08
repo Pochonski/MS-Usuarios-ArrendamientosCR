@@ -33,6 +33,7 @@ class MetricsEndpointTest {
     @Autowired private AuthMetrics authMetrics;
     @MockBean private LoginUseCase loginUseCase;
     @MockBean private com.arrendamientos.usuarios.domain.port.in.LoginGoogleUseCase loginGoogleUseCase;
+    @MockBean private com.arrendamientos.usuarios.domain.port.in.LoginGitHubUseCase loginGitHubUseCase;
     @MockBean private RegistrarUsuarioUseCase registrarUsuarioUseCase;
     @MockBean private com.arrendamientos.usuarios.domain.port.in.ObtenerPerfilUseCase obtenerPerfilUseCase;
     @MockBean private LogoutUseCase logoutUseCase;

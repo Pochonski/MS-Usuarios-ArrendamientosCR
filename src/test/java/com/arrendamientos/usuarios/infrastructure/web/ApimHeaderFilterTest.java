@@ -38,6 +38,7 @@ class ApimHeaderFilterTest {
                 new AppProperties.Jwt(null, null, null, null),
                 new AppProperties.Apim(subKey, thumbprint, validateCert, "", skipPaths),
                 new AppProperties.Google("", ""),
+                new AppProperties.GitHub("", ""),
                 new AppProperties.EmailVerification(""),
                 new AppProperties.RateLimit(15, 5, 200, 50, 100),
                 new AppProperties.Cors(List.of("*")),

@@ -49,6 +49,7 @@ class GoogleTokenVerifierWireMockIT {
                 new AppProperties.Jwt(null, null, null, null),
                 null,
                 new AppProperties.Google("test-google-client-id", ""),
+                null,
                 null, null, null, null, null, null,
                 new AppProperties.Security(List.of())
         );
@@ -71,6 +72,7 @@ class GoogleTokenVerifierWireMockIT {
                 new AppProperties.Jwt(null, null, null, null),
                 null,
                 new AppProperties.Google("", ""),
+                null,
                 null, null, null, null, null, null,
                 new AppProperties.Security(List.of())
         );

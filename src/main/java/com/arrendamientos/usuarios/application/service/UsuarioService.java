@@ -2,16 +2,19 @@ package com.arrendamientos.usuarios.application.service;
 
 import com.arrendamientos.usuarios.application.dto.AuthResult;
 import com.arrendamientos.usuarios.application.dto.CreateUsuarioCommand;
+import com.arrendamientos.usuarios.application.dto.GitHubLoginCommand;
 import com.arrendamientos.usuarios.application.dto.GoogleLoginCommand;
 import com.arrendamientos.usuarios.application.dto.LoginCommand;
 import com.arrendamientos.usuarios.application.dto.UpdateUsuarioCommand;
 import com.arrendamientos.usuarios.domain.exception.CorreoYaRegistradoException;
 import com.arrendamientos.usuarios.domain.exception.CredencialesInvalidasException;
 import com.arrendamientos.usuarios.domain.exception.CuentaBloqueadaException;
+import com.arrendamientos.usuarios.domain.exception.CuentaGitHubVinculadaException;
 import com.arrendamientos.usuarios.domain.exception.CuentaGoogleVinculadaException;
 import com.arrendamientos.usuarios.domain.exception.PermisoDenegadoException;
 import com.arrendamientos.usuarios.domain.exception.UsuarioNoEncontradoException;
 import com.arrendamientos.usuarios.domain.exception.ValidacionException;
+import com.arrendamientos.usuarios.domain.model.GitHubUserInfo;
 import com.arrendamientos.usuarios.domain.model.GoogleUserInfo;
 import com.arrendamientos.usuarios.domain.model.PasswordHash;
 import com.arrendamientos.usuarios.domain.model.RolUsuario;
@@ -21,6 +24,7 @@ import com.arrendamientos.usuarios.domain.model.UsuarioView;
 import com.arrendamientos.usuarios.domain.port.in.ActualizarUsuarioUseCase;
 import com.arrendamientos.usuarios.domain.port.in.EliminarUsuarioUseCase;
 import com.arrendamientos.usuarios.domain.port.in.ListarUsuariosUseCase;
+import com.arrendamientos.usuarios.domain.port.in.LoginGitHubUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LoginGoogleUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LoginUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LogoutUseCase;
@@ -28,6 +32,7 @@ import com.arrendamientos.usuarios.domain.port.in.ObtenerPerfilUseCase;
 import com.arrendamientos.usuarios.domain.port.in.ObtenerUsuarioUseCase;
 import com.arrendamientos.usuarios.domain.port.in.RefreshTokenUseCase;
 import com.arrendamientos.usuarios.domain.port.in.RegistrarUsuarioUseCase;
+import com.arrendamientos.usuarios.domain.port.out.GitHubTokenVerifierPort;
 import com.arrendamientos.usuarios.domain.port.out.GoogleTokenVerifierPort;
 import com.arrendamientos.usuarios.domain.port.out.PasswordEncoderPort;
 import com.arrendamientos.usuarios.domain.port.out.SequenceGeneratorPort;
@@ -52,6 +57,7 @@ public class UsuarioService implements
         RegistrarUsuarioUseCase,
         LoginUseCase,
         LoginGoogleUseCase,
+        LoginGitHubUseCase,
         RefreshTokenUseCase,
         LogoutUseCase,
         ObtenerPerfilUseCase,
@@ -67,6 +73,7 @@ public class UsuarioService implements
     private final PasswordEncoderPort passwordEncoder;
     private final TokenProviderPort tokenProvider;
     private final GoogleTokenVerifierPort googleVerifier;
+    private final GitHubTokenVerifierPort gitHubVerifier;
     private final SequenceGeneratorPort sequenceGenerator;
     private final AppProperties properties;
     private final AuthMetrics metrics;
@@ -77,6 +84,7 @@ public class UsuarioService implements
             PasswordEncoderPort passwordEncoder,
             TokenProviderPort tokenProvider,
             GoogleTokenVerifierPort googleVerifier,
+            GitHubTokenVerifierPort gitHubVerifier,
             SequenceGeneratorPort sequenceGenerator,
             AppProperties properties,
             AuthMetrics metrics) {
@@ -85,6 +93,7 @@ public class UsuarioService implements
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
         this.googleVerifier = googleVerifier;
+        this.gitHubVerifier = gitHubVerifier;
         this.sequenceGenerator = sequenceGenerator;
         this.properties = properties;
         this.metrics = metrics;
@@ -112,6 +121,7 @@ public class UsuarioService implements
                 hash,
                 cmd.rol(),
                 cmd.telefono(),
+                null,
                 null,
                 null,
                 now,
@@ -236,6 +246,7 @@ public class UsuarioService implements
                     existentePorCorreo.telefono(),
                     existentePorCorreo.avatar() == null ? googleUser.picture() : existentePorCorreo.avatar(),
                     googleUser.googleId(),
+                    existentePorCorreo.gitHubId(),
                     existentePorCorreo.fechaRegistro(),
                     existentePorCorreo.ultimoLogin(),
                     existentePorCorreo.intentosFallidos(),
@@ -255,6 +266,7 @@ public class UsuarioService implements
                     null,
                     googleUser.picture(),
                     googleUser.googleId(),
+                    null,
                     now,
                     null,
                     0,
@@ -269,6 +281,91 @@ public class UsuarioService implements
             usuario = usuarios.porId(id).orElseThrow(() -> new ValidacionException("Error al crear usuario de Google"));
         }
         metrics.googleSuccess();
+        return finalizarLogin(usuario);
+    }
+
+    // ---------------- LOGIN GITHUB ----------------
+
+    @Override
+    @Transactional
+    public AuthResult loginGitHub(GitHubLoginCommand cmd) {
+        GitHubUserInfo gitHubUser;
+        try {
+            gitHubUser = gitHubVerifier.verificar(cmd.code(), cmd.redirectUri());
+        } catch (Exception e) {
+            metrics.githubFailure();
+            throw e;
+        }
+
+        if (gitHubUser.email() == null || gitHubUser.email().isBlank()) {
+            metrics.githubFailure();
+            throw new IllegalArgumentException(
+                    "Tu perfil de GitHub no tiene un email público. Hacelo público en https://github.com/settings/emails y volvé a intentar.");
+        }
+
+        String correoNorm = normalizarCorreo(gitHubUser.email());
+
+        Usuario usuario = usuarios.porGitHubId(gitHubUser.githubId()).orElse(null);
+        if (usuario != null) {
+            metrics.githubSuccess();
+            return finalizarLogin(usuario);
+        }
+
+        if (correoNorm != null) {
+            Usuario existentePorCorreo = usuarios.porCorreo(correoNorm).orElse(null);
+            if (existentePorCorreo != null) {
+                if (existentePorCorreo.gitHubId() != null
+                        && !existentePorCorreo.gitHubId().equals(gitHubUser.githubId())) {
+                    metrics.githubFailure();
+                    throw new CuentaGitHubVinculadaException();
+                }
+                Usuario vinculado = new Usuario(
+                        existentePorCorreo.id(),
+                        existentePorCorreo.nombre(),
+                        existentePorCorreo.correo(),
+                        existentePorCorreo.contrasenaHash(),
+                        existentePorCorreo.rol(),
+                        existentePorCorreo.telefono(),
+                        existentePorCorreo.avatar() == null ? gitHubUser.avatar() : existentePorCorreo.avatar(),
+                        existentePorCorreo.googleId(),
+                        gitHubUser.githubId(),
+                        existentePorCorreo.fechaRegistro(),
+                        existentePorCorreo.ultimoLogin(),
+                        existentePorCorreo.intentosFallidos(),
+                        existentePorCorreo.bloqueadoHasta()
+                );
+                usuarios.guardar(vinculado);
+                usuario = usuarios.porId(vinculado.id().value()).orElse(vinculado);
+                metrics.githubSuccess();
+                return finalizarLogin(usuario);
+            }
+        }
+
+        String id = sequenceGenerator.siguienteUsuarioId();
+        Instant now = Instant.now();
+        Usuario nuevo = new Usuario(
+                new UsuarioId(id),
+                gitHubUser.name(),
+                correoNorm,
+                null,
+                cmd.rol() == null ? RolUsuario.DUENO : cmd.rol(),
+                null,
+                gitHubUser.avatar(),
+                null,
+                gitHubUser.githubId(),
+                now,
+                null,
+                0,
+                null
+        );
+        try {
+            usuarios.guardar(nuevo);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            metrics.githubFailure();
+            throw new CorreoYaRegistradoException();
+        }
+        usuario = usuarios.porId(id).orElseThrow(() -> new ValidacionException("Error al crear usuario de GitHub"));
+        metrics.githubSuccess();
         return finalizarLogin(usuario);
     }
 
@@ -387,6 +484,7 @@ public class UsuarioService implements
                 cmd.telefono() == null ? usuario.telefono() : cmd.telefono(),
                 cmd.avatar() == null ? usuario.avatar() : cmd.avatar(),
                 usuario.googleId(),
+                usuario.gitHubId(),
                 usuario.fechaRegistro(),
                 usuario.ultimoLogin(),
                 usuario.intentosFallidos(),

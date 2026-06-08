@@ -15,6 +15,8 @@ public interface UsuarioRepositoryPort {
 
     Optional<Usuario> porGoogleId(String googleId);
 
+    Optional<Usuario> porGitHubId(Long gitHubId);
+
     List<Usuario> porPrefijoCorreo(String prefijo);
 
     List<Usuario> porRol(RolUsuario rol);

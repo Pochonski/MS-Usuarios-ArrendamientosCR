@@ -26,6 +26,7 @@ public final class TestJwt {
                 new AppProperties.Jwt(SECRET, Duration.ofHours(1), Duration.ofDays(7), Duration.ofHours(24)),
                 new AppProperties.Apim("", "", false, "", List.of()),
                 new AppProperties.Google("", ""),
+                new AppProperties.GitHub("", ""),
                 new AppProperties.EmailVerification(""),
                 new AppProperties.RateLimit(15, 5, 200, 50, 100),
                 new AppProperties.Cors(List.of("*")),

@@ -2,22 +2,26 @@ package com.arrendamientos.usuarios.application.service;
 
 import com.arrendamientos.usuarios.application.dto.AuthResult;
 import com.arrendamientos.usuarios.application.dto.CreateUsuarioCommand;
+import com.arrendamientos.usuarios.application.dto.GitHubLoginCommand;
 import com.arrendamientos.usuarios.application.dto.GoogleLoginCommand;
 import com.arrendamientos.usuarios.application.dto.LoginCommand;
 import com.arrendamientos.usuarios.application.dto.UpdateUsuarioCommand;
 import com.arrendamientos.usuarios.domain.exception.CorreoYaRegistradoException;
 import com.arrendamientos.usuarios.domain.exception.CredencialesInvalidasException;
 import com.arrendamientos.usuarios.domain.exception.CuentaBloqueadaException;
+import com.arrendamientos.usuarios.domain.exception.CuentaGitHubVinculadaException;
 import com.arrendamientos.usuarios.domain.exception.CuentaGoogleVinculadaException;
 import com.arrendamientos.usuarios.domain.exception.PermisoDenegadoException;
 import com.arrendamientos.usuarios.domain.exception.UsuarioNoEncontradoException;
 import com.arrendamientos.usuarios.domain.exception.ValidacionException;
+import com.arrendamientos.usuarios.domain.model.GitHubUserInfo;
 import com.arrendamientos.usuarios.domain.model.GoogleUserInfo;
 import com.arrendamientos.usuarios.domain.model.PasswordHash;
 import com.arrendamientos.usuarios.domain.model.RolUsuario;
 import com.arrendamientos.usuarios.domain.model.Usuario;
 import com.arrendamientos.usuarios.domain.model.UsuarioId;
 import com.arrendamientos.usuarios.domain.model.UsuarioView;
+import com.arrendamientos.usuarios.domain.port.out.GitHubTokenVerifierPort;
 import com.arrendamientos.usuarios.domain.port.out.GoogleTokenVerifierPort;
 import com.arrendamientos.usuarios.domain.port.out.PasswordEncoderPort;
 import com.arrendamientos.usuarios.domain.port.out.SequenceGeneratorPort;
@@ -64,6 +68,7 @@ class UsuarioServiceTest {
     private PasswordEncoderPort passwordEncoder;
     private TokenProviderPort tokenProvider;
     private GoogleTokenVerifierPort googleVerifier;
+    private GitHubTokenVerifierPort gitHubVerifier;
     private SequenceGeneratorPort sequenceGenerator;
     private AppProperties properties;
     private UsuarioService service;
@@ -75,11 +80,13 @@ class UsuarioServiceTest {
         passwordEncoder = mock(PasswordEncoderPort.class);
         tokenProvider = mock(TokenProviderPort.class);
         googleVerifier = mock(GoogleTokenVerifierPort.class);
+        gitHubVerifier = mock(GitHubTokenVerifierPort.class);
         sequenceGenerator = mock(SequenceGeneratorPort.class);
         properties = new AppProperties(
                 new AppProperties.Jwt("secret", Duration.ofHours(1), Duration.ofDays(7), Duration.ofHours(24)),
                 new AppProperties.Apim("", "", false, "", List.of()),
                 new AppProperties.Google("", ""),
+                new AppProperties.GitHub("", ""),
                 new AppProperties.EmailVerification(""),
                 new AppProperties.RateLimit(15, 5, 200, 50, 100),
                 new AppProperties.Cors(List.of("*")),
@@ -88,7 +95,7 @@ class UsuarioServiceTest {
                 new AppProperties.Bcrypt(10),
                 new AppProperties.Security(List.of())
         );
-        service = new UsuarioService(usuarios, tokensRevocados, passwordEncoder, tokenProvider, googleVerifier, sequenceGenerator, properties, new AuthMetrics(new SimpleMeterRegistry()));
+        service = new UsuarioService(usuarios, tokensRevocados, passwordEncoder, tokenProvider, googleVerifier, gitHubVerifier, sequenceGenerator, properties, new AuthMetrics(new SimpleMeterRegistry()));
 
         lenient().when(tokenProvider.generarAccessToken(anyString(), anyString(), any(), anyString())).thenReturn("access.token");
         lenient().when(tokenProvider.generarRefreshToken(anyString(), anyString())).thenReturn("refresh.token");
@@ -108,6 +115,7 @@ class UsuarioServiceTest {
                 "+50688888888",
                 null,
                 null,
+                null,
                 Instant.parse("2024-01-01T00:00:00Z"),
                 null,
                 0,
@@ -123,7 +131,7 @@ class UsuarioServiceTest {
                 new PasswordHash("$2a$10$hashed"),
                 RolUsuario.DUENO,
                 "+50688888888",
-                null, null,
+                null, null, null,
                 Instant.parse("2024-01-01T00:00:00Z"),
                 null,
                 5,
@@ -293,6 +301,7 @@ class UsuarioServiceTest {
                     base.contrasenaHash(), base.rol(), base.telefono(),
                     base.avatar(),
                     "otro-google-id",
+                    base.gitHubId(),
                     base.fechaRegistro(), base.ultimoLogin(),
                     base.intentosFallidos(), base.bloqueadoHasta()
             );
@@ -313,7 +322,7 @@ class UsuarioServiceTest {
             when(sequenceGenerator.siguienteUsuarioId()).thenReturn("usr-077");
             when(usuarios.guardar(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
             when(usuarios.porId("usr-077")).thenReturn(Optional.of(
-                    new Usuario(new UsuarioId("usr-077"), "G User", "g@example.com", null, RolUsuario.INQUILINO, null, "https://avatar.png", "google-sub-1", Instant.now(), null, 0, null)
+                    new Usuario(new UsuarioId("usr-077"), "G User", "g@example.com", null, RolUsuario.INQUILINO, null, "https://avatar.png", "google-sub-1", null, Instant.now(), null, 0, null)
             ));
 
             AuthResult r = service.loginGoogle(new GoogleLoginCommand("tok", RolUsuario.INQUILINO, null, null));
@@ -330,7 +339,7 @@ class UsuarioServiceTest {
             when(sequenceGenerator.siguienteUsuarioId()).thenReturn("usr-078");
             when(usuarios.guardar(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
             when(usuarios.porId("usr-078")).thenReturn(Optional.of(
-                    new Usuario(new UsuarioId("usr-078"), "G", "g@e.com", null, RolUsuario.DUENO, null, null, "google-sub-1", Instant.now(), null, 0, null)
+                    new Usuario(new UsuarioId("usr-078"), "G", "g@e.com", null, RolUsuario.DUENO, null, null, "google-sub-1", null, Instant.now(), null, 0, null)
             ));
 
             AuthResult r = service.loginGoogle(new GoogleLoginCommand("tok", null, null, null));
@@ -344,6 +353,122 @@ class UsuarioServiceTest {
                     () -> service.loginGoogle(new GoogleLoginCommand("bad", null, null, null)));
             verify(usuarios, never()).porGoogleId(anyString());
             verify(usuarios, never()).porCorreo(anyString());
+        }
+    }
+
+    // ---------------- LOGIN GITHUB ----------------
+
+    @Nested
+    @DisplayName("loginGitHub")
+    class LoginGitHub {
+
+        private final GitHubUserInfo ghUser = new GitHubUserInfo(12345L, "octocat", "octo@example.com", "Octo Cat", "https://avatars/12345");
+
+        @Test
+        void usuarioGitHubExistenteLogeaSinConsultarPorCorreo() {
+            Usuario u = buildUsuario("usr-001", null);
+            when(gitHubVerifier.verificar(eq("code-1"), any())).thenReturn(ghUser);
+            when(usuarios.porGitHubId(12345L)).thenReturn(Optional.of(u));
+
+            AuthResult r = service.loginGitHub(new GitHubLoginCommand("code-1", "https://app/cb", null));
+            assertNotNull(r);
+            verify(usuarios, never()).porCorreo(anyString());
+        }
+
+        @Test
+        void vinculaGitHubIdAUsuarioConCorreoExistente() {
+            Usuario sinGitHub = buildUsuario("usr-001", "$2a$10$hashed");
+            when(gitHubVerifier.verificar(eq("code-1"), any())).thenReturn(ghUser);
+            when(usuarios.porGitHubId(12345L)).thenReturn(Optional.empty());
+            when(usuarios.porCorreo("octo@example.com")).thenReturn(Optional.of(sinGitHub));
+            when(usuarios.guardar(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(usuarios.porId("usr-001")).thenReturn(Optional.of(sinGitHub));
+
+            AuthResult r = service.loginGitHub(new GitHubLoginCommand("code-1", "https://app/cb", null));
+            assertNotNull(r);
+            verify(usuarios).guardar(any(Usuario.class));
+        }
+
+        @Test
+        void rechazaTakeoverCuandoGitHubIdYaExiste() {
+            Usuario base = buildUsuario("usr-001", "$2a$10$hashed");
+            Usuario conOtroGitHub = new Usuario(
+                    base.id(), base.nombre(), base.correo(),
+                    base.contrasenaHash(), base.rol(), base.telefono(),
+                    base.avatar(), base.googleId(),
+                    99999L,
+                    base.fechaRegistro(), base.ultimoLogin(),
+                    base.intentosFallidos(), base.bloqueadoHasta()
+            );
+            when(gitHubVerifier.verificar(eq("code-1"), any())).thenReturn(ghUser);
+            when(usuarios.porGitHubId(12345L)).thenReturn(Optional.empty());
+            when(usuarios.porCorreo("octo@example.com")).thenReturn(Optional.of(conOtroGitHub));
+
+            assertThrows(CuentaGitHubVinculadaException.class,
+                    () -> service.loginGitHub(new GitHubLoginCommand("code-1", "https://app/cb", null)));
+        }
+
+        @Test
+        void creaUsuarioNuevoGitHub() {
+            when(gitHubVerifier.verificar(eq("code-1"), any())).thenReturn(ghUser);
+            when(usuarios.porGitHubId(12345L)).thenReturn(Optional.empty());
+            when(usuarios.porCorreo("octo@example.com")).thenReturn(Optional.empty());
+            when(sequenceGenerator.siguienteUsuarioId()).thenReturn("usr-079");
+            when(usuarios.guardar(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(usuarios.porId("usr-079")).thenReturn(Optional.of(
+                    new Usuario(new UsuarioId("usr-079"), "Octo Cat", "octo@example.com", null, RolUsuario.INQUILINO, null, "https://avatars/12345", null, 12345L, Instant.now(), null, 0, null)
+            ));
+
+            AuthResult r = service.loginGitHub(new GitHubLoginCommand("code-1", "https://app/cb", RolUsuario.INQUILINO));
+            assertNotNull(r);
+            verify(usuarios).guardar(any(Usuario.class));
+            verify(sequenceGenerator).siguienteUsuarioId();
+        }
+
+        @Test
+        void creaUsuarioGitHubConEmailNuloAhoraFallaAntesDeGuardar() {
+            // Con el fix de validación: si el email es null, no se llega a guardar.
+            // Este test ahora valida que el rechazo ocurre ANTES del lookup de GitHubId
+            // (mismo comportamiento que rechazaEmailOcultoEnGitHub pero más específico).
+            GitHubUserInfo sinEmail = new GitHubUserInfo(12345L, "octocat", null, "Octo Cat", "https://avatars/12345");
+            when(gitHubVerifier.verificar(eq("code-1"), any())).thenReturn(sinEmail);
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> service.loginGitHub(new GitHubLoginCommand("code-1", "https://app/cb", null)));
+            verify(usuarios, never()).porGitHubId(any());
+            verify(usuarios, never()).guardar(any(Usuario.class));
+        }
+
+        @Test
+        void noConsultaRepositorioSiGitHubFalla() {
+            when(gitHubVerifier.verificar(eq("bad"), any())).thenThrow(new IllegalArgumentException("bad code"));
+            assertThrows(IllegalArgumentException.class,
+                    () -> service.loginGitHub(new GitHubLoginCommand("bad", "https://app/cb", null)));
+            verify(usuarios, never()).porGitHubId(any());
+            verify(usuarios, never()).porCorreo(anyString());
+        }
+
+        @Test
+        void rechazaEmailOcultoEnGitHub() {
+            GitHubUserInfo sinEmail = new GitHubUserInfo(12345L, "octocat", null, "Octo Cat", "https://avatars/12345");
+            when(gitHubVerifier.verificar(eq("code-1"), any())).thenReturn(sinEmail);
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> service.loginGitHub(new GitHubLoginCommand("code-1", "https://app/cb", null)));
+            assertTrue(ex.getMessage().contains("email público"));
+            verify(usuarios, never()).porGitHubId(any());
+            verify(usuarios, never()).porCorreo(anyString());
+            verify(usuarios, never()).guardar(any(Usuario.class));
+        }
+
+        @Test
+        void rechazaEmailVacioEnGitHub() {
+            GitHubUserInfo emailVacio = new GitHubUserInfo(12345L, "octocat", "   ", "Octo Cat", "https://avatars/12345");
+            when(gitHubVerifier.verificar(eq("code-1"), any())).thenReturn(emailVacio);
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> service.loginGitHub(new GitHubLoginCommand("code-1", "https://app/cb", null)));
+            assertTrue(ex.getMessage().contains("email público"));
         }
     }
 

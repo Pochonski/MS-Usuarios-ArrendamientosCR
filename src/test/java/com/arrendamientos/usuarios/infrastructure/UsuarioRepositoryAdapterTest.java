@@ -59,7 +59,7 @@ class UsuarioRepositoryAdapterTest {
                 "juan@example.com",
                 new com.arrendamientos.usuarios.domain.model.PasswordHash("$2a$10$h"),
                 RolUsuario.DUENO,
-                null, null, null,
+                null, null, null, null,
                 Instant.now(), null, 0, null
         );
         port.guardar(u);

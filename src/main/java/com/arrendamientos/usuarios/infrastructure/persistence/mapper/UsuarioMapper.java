@@ -26,6 +26,7 @@ public class UsuarioMapper {
                 e.getTelefono(),
                 e.getAvatar(),
                 e.getGoogleId(),
+                e.getGitHubId(),
                 e.getFechaRegistro(),
                 e.getUltimoLogin(),
                 e.getIntentosFallidos(),
@@ -43,6 +44,7 @@ public class UsuarioMapper {
         e.setTelefono(u.telefono());
         e.setAvatar(u.avatar());
         e.setGoogleId(u.googleId());
+        e.setGitHubId(u.gitHubId());
         e.setFechaRegistro(u.fechaRegistro() == null ? Instant.now() : u.fechaRegistro());
         e.setUltimoLogin(u.ultimoLogin());
         e.setIntentosFallidos(u.intentosFallidos());

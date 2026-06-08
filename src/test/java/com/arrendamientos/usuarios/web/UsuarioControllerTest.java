@@ -6,6 +6,7 @@ import com.arrendamientos.usuarios.domain.port.in.ActualizarUsuarioUseCase;
 import com.arrendamientos.usuarios.domain.port.in.EliminarUsuarioUseCase;
 import com.arrendamientos.usuarios.domain.port.in.EnviarVerificacionEmailUseCase;
 import com.arrendamientos.usuarios.domain.port.in.ListarUsuariosUseCase;
+import com.arrendamientos.usuarios.domain.port.in.LoginGitHubUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LoginGoogleUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LoginUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LogoutUseCase;
@@ -50,6 +51,7 @@ class UsuarioControllerTest {
     @MockBean private EliminarUsuarioUseCase eliminarUsuarioUseCase;
     @MockBean private LoginUseCase loginUseCase;
     @MockBean private LoginGoogleUseCase loginGoogleUseCase;
+    @MockBean private LoginGitHubUseCase loginGitHubUseCase;
     @MockBean private RegistrarUsuarioUseCase registrarUsuarioUseCase;
     @MockBean private ObtenerPerfilUseCase obtenerPerfilUseCase;
     @MockBean private LogoutUseCase logoutUseCase;

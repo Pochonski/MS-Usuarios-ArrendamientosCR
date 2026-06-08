@@ -15,6 +15,7 @@ public record AppProperties(
         Jwt jwt,
         Apim apim,
         Google google,
+        GitHub gitHub,
         EmailVerification emailVerification,
         RateLimit rateLimit,
         Cors cors,
@@ -43,6 +44,19 @@ public record AppProperties(
             String clientId,
             String allowedDomain
     ) {}
+
+    public record GitHub(
+            String clientId,
+            String clientSecret,
+            String tokenUrl,
+            String userUrl
+    ) {
+        public GitHub(String clientId, String clientSecret) {
+            this(clientId, clientSecret,
+                    "https://github.com/login/oauth/access_token",
+                    "https://api.github.com/user");
+        }
+    }
 
     public record EmailVerification(
             String frontendBaseUrl

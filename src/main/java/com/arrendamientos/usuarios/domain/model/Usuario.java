@@ -12,6 +12,7 @@ public record Usuario(
         String telefono,
         String avatar,
         String googleId,
+        Long gitHubId,
         Instant fechaRegistro,
         Instant ultimoLogin,
         int intentosFallidos,

@@ -76,7 +76,7 @@ class UsuarioPersistenceMsSqlIT {
                 new com.arrendamientos.usuarios.domain.model.PasswordHash(passwordEncoder.hash("Password123!")),
                 RolUsuario.DUENO,
                 "+50688888888",
-                null, null,
+                null, null, null,
                 Instant.now(), null, 0, null
         );
         usuarios.guardar(u);
@@ -93,7 +93,7 @@ class UsuarioPersistenceMsSqlIT {
                 new UsuarioId(sequences.siguienteUsuarioId()),
                 "User1", correo,
                 new com.arrendamientos.usuarios.domain.model.PasswordHash("h"),
-                RolUsuario.DUENO, null, null, null,
+                RolUsuario.DUENO, null, null, null, null,
                 Instant.now(), null, 0, null
         ));
 
@@ -103,7 +103,7 @@ class UsuarioPersistenceMsSqlIT {
                     new UsuarioId(sequences.siguienteUsuarioId()),
                     "User2", correo,
                     new com.arrendamientos.usuarios.domain.model.PasswordHash("h"),
-                    RolUsuario.DUENO, null, null, null,
+                    RolUsuario.DUENO, null, null, null, null,
                     Instant.now(), null, 0, null
             ));
             assertFalse(true, "Debería haber lanzado DataIntegrityViolationException");
@@ -120,7 +120,7 @@ class UsuarioPersistenceMsSqlIT {
                 new UsuarioId(id),
                 "Lockout", "lockout" + System.nanoTime() + "@example.com",
                 new com.arrendamientos.usuarios.domain.model.PasswordHash("h"),
-                RolUsuario.DUENO, null, null, null,
+                RolUsuario.DUENO, null, null, null, null,
                 Instant.now(), null, 0, null
         ));
 

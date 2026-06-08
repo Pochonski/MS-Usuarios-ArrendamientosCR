@@ -58,6 +58,15 @@ public class UsuarioRepositoryAdapter implements UsuarioRepositoryPort {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Usuario> porGitHubId(Long gitHubId) {
+        if (gitHubId == null) {
+            return Optional.empty();
+        }
+        return jpa.findByGitHubId(gitHubId).map(mapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Usuario> porPrefijoCorreo(String prefijo) {
         if (prefijo == null) {
             return List.of();

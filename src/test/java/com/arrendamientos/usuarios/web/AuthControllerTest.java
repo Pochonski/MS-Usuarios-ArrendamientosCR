@@ -9,6 +9,7 @@ import com.arrendamientos.usuarios.domain.port.in.ActualizarUsuarioUseCase;
 import com.arrendamientos.usuarios.domain.port.in.EliminarUsuarioUseCase;
 import com.arrendamientos.usuarios.domain.port.in.EnviarVerificacionEmailUseCase;
 import com.arrendamientos.usuarios.domain.port.in.ListarUsuariosUseCase;
+import com.arrendamientos.usuarios.domain.port.in.LoginGitHubUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LoginGoogleUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LoginUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LogoutUseCase;
@@ -38,6 +39,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -52,6 +54,7 @@ class AuthControllerTest {
     @Autowired private ObjectMapper objectMapper;
     @MockBean private LoginUseCase loginUseCase;
     @MockBean private LoginGoogleUseCase loginGoogleUseCase;
+    @MockBean private LoginGitHubUseCase loginGitHubUseCase;
     @MockBean private RegistrarUsuarioUseCase registrarUsuarioUseCase;
     @MockBean private ObtenerPerfilUseCase obtenerPerfilUseCase;
     @MockBean private LogoutUseCase logoutUseCase;
@@ -177,6 +180,46 @@ class AuthControllerTest {
                             .contentType("application/json")
                             .content("{}"))
                     .andExpect(status().isBadRequest());
+        }
+    }
+
+    // ============== GITHUB ==============
+
+    @Nested
+    class GitHubEndpoint {
+
+        @Test
+        void githubLoginExitoso() throws Exception {
+            when(loginGitHubUseCase.loginGitHub(any())).thenReturn(
+                    new com.arrendamientos.usuarios.application.dto.AuthResult(
+                            "t", "r", buildView("usr-001", RolUsuario.DUENO)));
+
+            mockMvc.perform(post("/api/auth/github")
+                            .contentType("application/json")
+                            .content("{\"code\":\"auth-code-123\",\"redirectUri\":\"http://localhost:5173/auth/github/callback\",\"rol\":\"dueno\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.token").value("t"));
+        }
+
+        @Test
+        void githubSinCodeFallaValidacion() throws Exception {
+            mockMvc.perform(post("/api/auth/github")
+                            .contentType("application/json")
+                            .content("{}"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        void githubEmailOcultoRetorna400() throws Exception {
+            when(loginGitHubUseCase.loginGitHub(any()))
+                    .thenThrow(new IllegalArgumentException(
+                            "Tu perfil de GitHub no tiene un email público. Hacelo público en https://github.com/settings/emails y volvé a intentar."));
+
+            mockMvc.perform(post("/api/auth/github")
+                            .contentType("application/json")
+                            .content("{\"code\":\"x\",\"redirectUri\":\"http://localhost/auth/github/callback\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value(containsString("email público")));
         }
     }
 

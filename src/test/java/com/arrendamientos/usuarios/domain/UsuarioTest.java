@@ -66,7 +66,7 @@ class UsuarioTest {
 
         Usuario inquilino = new Usuario(
                 dueno.id(), dueno.nombre(), dueno.correo(), dueno.contrasenaHash(),
-                RolUsuario.INQUILINO, dueno.telefono(), dueno.avatar(), dueno.googleId(),
+                RolUsuario.INQUILINO, dueno.telefono(), dueno.avatar(), dueno.googleId(), dueno.gitHubId(),
                 dueno.fechaRegistro(), dueno.ultimoLogin(), dueno.intentosFallidos(), dueno.bloqueadoHasta()
         );
         assertEquals(RolUsuario.INQUILINO, inquilino.aView().rol());
@@ -81,6 +81,7 @@ class UsuarioTest {
                 RolUsuario.DUENO,
                 "+50688888888",
                 "https://avatar.example.com/juan.png",
+                null,
                 null,
                 java.time.Instant.parse("2024-01-01T00:00:00Z"),
                 null,
@@ -99,6 +100,7 @@ class UsuarioTest {
                 "+50688888888",
                 null,
                 null,
+                null,
                 java.time.Instant.parse("2024-01-01T00:00:00Z"),
                 null,
                 0,
@@ -115,6 +117,7 @@ class UsuarioTest {
                 RolUsuario.DUENO,
                 "+50688888888",
                 "https://avatar.example.com/juan.png",
+                null,
                 null,
                 java.time.Instant.parse("2024-01-01T00:00:00Z"),
                 null,

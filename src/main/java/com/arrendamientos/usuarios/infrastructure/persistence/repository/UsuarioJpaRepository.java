@@ -18,6 +18,8 @@ public interface UsuarioJpaRepository extends JpaRepository<UsuarioEntity, Strin
 
     Optional<UsuarioEntity> findByGoogleId(String googleId);
 
+    Optional<UsuarioEntity> findByGitHubId(Long gitHubId);
+
     List<UsuarioEntity> findByCorreoStartingWith(String prefijo);
 
     List<UsuarioEntity> findByRol(String rol);

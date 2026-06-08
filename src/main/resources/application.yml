@@ -56,6 +56,9 @@ app:
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
     allowed-domain: ${GOOGLE_ALLOWED_DOMAIN:}
+  github:
+    client-id: ${GITHUB_CLIENT_ID:}
+    client-secret: ${GITHUB_CLIENT_SECRET:}
   email-verification:
     frontend-base-url: ${EMAIL_VERIFICATION_FRONTEND_URL:https://agreeable-ground-0b1436910.6.azurestaticapps.net}
   rate-limit:
@@ -79,6 +82,7 @@ app:
       - /api/auth/login
       - /api/auth/registro
       - /api/auth/google
+      - /api/auth/github
       - /api/auth/verify-email/**
       - /api/health
       - /api/docs

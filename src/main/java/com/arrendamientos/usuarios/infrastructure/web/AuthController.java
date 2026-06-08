@@ -2,10 +2,12 @@ package com.arrendamientos.usuarios.infrastructure.web;
 
 import com.arrendamientos.usuarios.application.dto.AuthResult;
 import com.arrendamientos.usuarios.application.dto.CreateUsuarioCommand;
+import com.arrendamientos.usuarios.application.dto.GitHubLoginCommand;
 import com.arrendamientos.usuarios.application.dto.GoogleLoginCommand;
 import com.arrendamientos.usuarios.application.dto.LoginCommand;
 import com.arrendamientos.usuarios.domain.model.UsuarioView;
 import com.arrendamientos.usuarios.domain.port.in.EnviarVerificacionEmailUseCase;
+import com.arrendamientos.usuarios.domain.port.in.LoginGitHubUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LoginGoogleUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LoginUseCase;
 import com.arrendamientos.usuarios.domain.port.in.LogoutUseCase;
@@ -16,6 +18,7 @@ import com.arrendamientos.usuarios.domain.port.in.VerificarEmailUseCase;
 import com.arrendamientos.usuarios.domain.port.out.TokenProviderPort;
 import com.arrendamientos.usuarios.infrastructure.config.AppProperties;
 import com.arrendamientos.usuarios.infrastructure.security.AuthenticatedUser;
+import com.arrendamientos.usuarios.infrastructure.web.dto.GitHubLoginRequest;
 import com.arrendamientos.usuarios.infrastructure.web.dto.GoogleLoginRequest;
 import com.arrendamientos.usuarios.infrastructure.web.dto.LoginRequest;
 import com.arrendamientos.usuarios.infrastructure.web.dto.LoginResponseDto;
@@ -47,6 +50,7 @@ public class AuthController {
 
     private final LoginUseCase loginUseCase;
     private final LoginGoogleUseCase loginGoogleUseCase;
+    private final LoginGitHubUseCase loginGitHubUseCase;
     private final RegistrarUsuarioUseCase registrarUsuarioUseCase;
     private final ObtenerPerfilUseCase obtenerPerfilUseCase;
     private final LogoutUseCase logoutUseCase;
@@ -59,6 +63,7 @@ public class AuthController {
     public AuthController(
             LoginUseCase loginUseCase,
             LoginGoogleUseCase loginGoogleUseCase,
+            LoginGitHubUseCase loginGitHubUseCase,
             RegistrarUsuarioUseCase registrarUsuarioUseCase,
             ObtenerPerfilUseCase obtenerPerfilUseCase,
             LogoutUseCase logoutUseCase,
@@ -69,6 +74,7 @@ public class AuthController {
             AppProperties properties) {
         this.loginUseCase = loginUseCase;
         this.loginGoogleUseCase = loginGoogleUseCase;
+        this.loginGitHubUseCase = loginGitHubUseCase;
         this.registrarUsuarioUseCase = registrarUsuarioUseCase;
         this.obtenerPerfilUseCase = obtenerPerfilUseCase;
         this.logoutUseCase = logoutUseCase;
@@ -110,6 +116,15 @@ public class AuthController {
                 : properties.google().allowedDomain();
         AuthResult r = loginGoogleUseCase.loginGoogle(new GoogleLoginCommand(
                 req.googleToken(), req.rol(), req.nonce(), hd
+        ));
+        return ResponseEntity.ok(LoginResponseDto.from(r));
+    }
+
+    @PostMapping("/github")
+    @Operation(summary = "Iniciar sesión o registrarse con GitHub OAuth (Authorization Code flow)")
+    public ResponseEntity<LoginResponseDto> github(@Valid @RequestBody GitHubLoginRequest req) {
+        AuthResult r = loginGitHubUseCase.loginGitHub(new GitHubLoginCommand(
+                req.code(), req.redirectUri(), req.rol()
         ));
         return ResponseEntity.ok(LoginResponseDto.from(r));
     }

@@ -4,6 +4,7 @@ app:
       - /api/auth/login
       - /api/auth/registro
       - /api/auth/google
+      - /api/auth/github
       - /api/auth/verify-email/**
       - /api/health
       - /v3/api-docs/**
