@@ -62,9 +62,13 @@ public class GitHubTokenVerifierAdapter implements GitHubTokenVerifierPort {
         if (code == null || code.isBlank()) {
             throw new IllegalArgumentException("Code de GitHub es requerido");
         }
-        if (properties.gitHub().clientId() == null || properties.gitHub().clientId().isBlank()
-                || properties.gitHub().clientSecret() == null || properties.gitHub().clientSecret().isBlank()) {
-            throw new IllegalStateException("GitHub OAuth not configured");
+        com.arrendamientos.usuarios.infrastructure.config.AppProperties.GitHub gh = properties.gitHub();
+        if (gh == null
+                || gh.clientId() == null || gh.clientId().isBlank()
+                || gh.clientSecret() == null || gh.clientSecret().isBlank()) {
+            throw new IllegalStateException(
+                    "GitHub OAuth not configured: app.github.client-id/client-secret missing or empty "
+                  + "(check GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET env vars on the App Service)");
         }
 
         String accessToken = exchangeCodeForToken(code, redirectUri);

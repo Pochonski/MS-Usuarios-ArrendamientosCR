@@ -86,7 +86,7 @@ class UsuarioServiceTest {
                 new AppProperties.Jwt("secret", Duration.ofHours(1), Duration.ofDays(7), Duration.ofHours(24)),
                 new AppProperties.Apim("", "", false, "", List.of()),
                 new AppProperties.Google("", ""),
-                new AppProperties.GitHub("", ""),
+                new AppProperties.GitHub("", "", null, null),
                 new AppProperties.EmailVerification(""),
                 new AppProperties.RateLimit(15, 5, 200, 50, 100),
                 new AppProperties.Cors(List.of("*")),

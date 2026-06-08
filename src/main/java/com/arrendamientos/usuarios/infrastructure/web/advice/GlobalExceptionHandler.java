@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -87,6 +88,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDto> handleIllegal(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponseDto.simple("BadRequest", ex.getMessage(), HttpStatus.BAD_REQUEST.value()));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponseDto> handleIllegalState(IllegalStateException ex) {
+        // Config / setup errors (e.g. OAuth client credentials missing) — 503 Service Unavailable
+        // is more accurate than 500 because it's a server-side config issue, not an unhandled crash.
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ErrorResponseDto.simple("ServiceUnavailable", ex.getMessage(), HttpStatus.SERVICE_UNAVAILABLE.value()));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponseDto> handleBadJson(HttpMessageNotReadableException ex) {
+        log.warn("JSON malformado: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponseDto.simple("BadRequest", "JSON malformado o cuerpo inválido", 400));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

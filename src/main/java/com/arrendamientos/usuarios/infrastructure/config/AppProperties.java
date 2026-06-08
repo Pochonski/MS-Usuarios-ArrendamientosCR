@@ -51,10 +51,18 @@ public record AppProperties(
             String tokenUrl,
             String userUrl
     ) {
-        public GitHub(String clientId, String clientSecret) {
-            this(clientId, clientSecret,
-                    "https://github.com/login/oauth/access_token",
-                    "https://api.github.com/user");
+        public GitHub {
+            // Compact constructor: aplica defaults si Spring no bindea los URLs.
+            // Antes había un constructor de 2-args que Spring Boot 3 con @ConfigurationProperties
+            // sobre records NO usaba para binding — bindeaba el constructor canónico de 4
+            // args, pero como los URLs venían null, el binding entero fallaba silenciosamente
+            // y `properties.gitHub()` quedaba null. Por eso el IllegalStateException con NPE.
+            if (tokenUrl == null || tokenUrl.isBlank()) {
+                tokenUrl = "https://github.com/login/oauth/access_token";
+            }
+            if (userUrl == null || userUrl.isBlank()) {
+                userUrl = "https://api.github.com/user";
+            }
         }
     }
 
