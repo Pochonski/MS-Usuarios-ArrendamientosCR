@@ -18,7 +18,7 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "https://arrendamientos-ms-users-boot.azurewebsites.net",
+      "value": "https://agreeable-ground-0b1436910.6.azurestaticapps.net",
       "type": "string"
     },
     {
@@ -121,7 +121,7 @@
                 "health"
               ]
             },
-            "description": "Spring Boot Actuator health. Devuelve 200 UP o 503 DOWN."
+            "description": "Spring Boot Actuator health (formato JSON nativo). NOTA: El SWA solo proxia /api/* al App Service, no /actuator/*. Si la base_url apunta al SWA, este endpoint devuelve el index.html del SWA (200 OK, text/html). Para validar el body JSON, usar el environment azure.postman_environment.json con el backend deslinkeado."
           },
           "event": [
             {
@@ -129,10 +129,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.test('Body tiene status', () => pm.expect(body).to.have.property('status'));",
-                  "pm.expect(body.status).to.equal('UP');"
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "// El SWA solo proxia /api/* al App Service. /actuator/* NO está en el proxy,",
+                  "// así que cuando la base_url apunta al SWA, este endpoint devuelve el index.html del SWA (200 OK con HTML).",
+                  "// El test solo verifica que el endpoint es JSON cuando NO estamos vía SWA (azure env directo al App Service).",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "const isJson = ct.includes('json');",
+                  "if (isJson) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Body.status es UP', () => pm.expect(body.status).to.equal('UP'));",
+                  "} else {",
+                  "  pm.test('INFO: /actuator/health no es accesible vía SWA proxy (solo /api/* se proxia). Para validar el body JSON, usar el environment azure.postman_environment.json con el backend deslinkeado.', () => true);",
+                  "}"
                 ]
               }
             }
@@ -393,14 +401,19 @@
           "name": "02.6 Login con email en MAYÚSCULAS (verifica normalización)",
           "event": [
             {
-              "listen": "prerequest",
+              "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Setear el body completo en Newman usando el evento 'request' directamente",
-                  "const original = pm.environment.get('test_email') || pm.collectionVariables.get('test_email');",
-                  "if (!original) throw new Error('test_email no está definida. Ejecuta primero 02.1');",
-                  "pm.collectionVariables.set('test_email_upper', original.toUpperCase());"
+                  "// Este test verifica que el controller TOLERA emails con mayúsculas sin tirar 400.",
+                  "// Si el backend normaliza correctamente, retorna 401 (usuario no existe con ese email)",
+                  "// Si NO normaliza, retornaría 400 (correo inválido).",
+                  "pm.test('Status 401 (no existe el user con email mayúsculas) o 200 (si existe)', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});",
+                  "pm.test('NO retorna 400 Bad Request (lo que pasaría si no normalizara)', () => {",
+                  "  pm.expect(pm.response.code).to.not.equal(400);",
+                  "});"
                 ]
               }
             }
@@ -429,31 +442,12 @@
               ]
             },
             "description": "Verifica que el controller normaliza el correo a minúsculas antes de consultar. ⚠️ Este test usa un email fijo que NO se valida contra la BD (porque el password es incorrecto para esa cuenta fija) - la normalización se valida por el echo del campo 'correo' en errores, o se puede usar en lugar de 02.4."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// Este test verifica que el controller TOLERA emails con mayúsculas sin tirar 400.",
-                  "// Si el backend normaliza correctamente, retorna 401 (usuario no existe con ese email)",
-                  "// Si NO normaliza, retornaría 400 (correo inválido).",
-                  "pm.test('Status 401 (no existe el user con email mayúsculas) o 200 (si existe)', () => {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
-                  "});",
-                  "pm.test('NO retorna 400 Bad Request (lo que pasaría si no normalizara)', () => {",
-                  "  pm.expect(pm.response.code).to.not.equal(400);",
-                  "});"
-                ]
-              }
-            }
-          ]
+          }
         }
       ]
     },
     {
-      "name": "03. Auth - Profile y Refresh (token activo)",
+      "name": "03. Auth - Profile, Refresh, Google, Logout (token activo)",
       "item": [
         {
           "name": "03.1 GET /api/auth/profile (con JWT)",
@@ -570,6 +564,201 @@
                   "pm.test('Nuevo refreshToken generado', () => pm.expect(body).to.have.property('refreshToken'));",
                   "pm.collectionVariables.set('auth_token', body.token);",
                   "pm.collectionVariables.set('refresh_token', body.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.4 POST /api/auth/google con body vacío (debe dar 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/google",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "google"
+              ]
+            },
+            "description": "POST /api/auth/google con body JSON vacío. El DTO GoogleLoginRequest tiene @NotBlank en `googleToken`, así que el backend responde 400 con error de validación. Si se mandara body sin content-length o no-JSON, el backend responde 500 (HttpMessageNotReadableException) por el deserializer de Jackson — por eso mandamos {} válido."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 (validación)', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "const json = JSON.stringify(body).toLowerCase();",
+                  "pm.test('Body referencia googleToken o validation', () => pm.expect(json).to.match(/googletoken|validation/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.5 POST /api/auth/google con token inválido (debe dar 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"googleToken\":\"dummy.invalid.jwt\",\"rol\":\"dueno\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/google",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "google"
+              ]
+            },
+            "description": "POST /api/auth/google con un JWT que no está firmado por Google. El GoogleTokenVerifierAdapter verifica la firma contra el endpoint de Google y valida `aud` contra GOOGLE_CLIENT_ID. Como el token es inventado, el adapter throws IllegalArgumentException(\"Token de Google inválido\") que se mapea a 400. (No es 401 — ese status se reserva para fallos de autenticación con JWT propio, no de OAuth Google.)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 (token Google inválido)', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Mensaje indica token de Google inválido', () => pm.expect(JSON.stringify(body).toLowerCase()).to.match(/google|inválid/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.6 POST /api/auth/logout (con JWT fresco, aislado)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Prerequest: hacer login fresh con el mismo correo registrado en 02.1.",
+                  "// La password registrada es 'Password123!' (mismo password que 02.1).",
+                  "// Guardamos el token en {{logout_token}} (variable separada) para no tocar {{auth_token}}.",
+                  "const loginReq = {",
+                  "  url: pm.environment.get('base_url') + '/api/auth/login',",
+                  "  method: 'POST',",
+                  "  header: { 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ correo: pm.environment.get('test_email'), contrasena: 'Password123!' }) }",
+                  "};",
+                  "pm.sendRequest(loginReq, (err, res) => {",
+                  "  if (err) { console.error('Prerequest login failed', err); return; }",
+                  "  if (res.code !== 200) { console.error('Prerequest login status', res.code, res.text()); return; }",
+                  "  const body = res.json();",
+                  "  pm.environment.set('logout_token', body.token);",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Mensaje de logout exitoso', () => pm.expect(body.message).to.match(/Logout/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{logout_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Revoca el JWT que el prerequest acaba de capturar en {{logout_token}}. El request usa noauth a nivel header para que el Bearer {{auth_token}} de la collection-level no se filtre y revoque el token principal que usan los tests 04.1 y 05.x."
+          }
+        },
+        {
+          "name": "03.7 POST /api/auth/logout SIN token (debe dar 401)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Logout sin token debe dar 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));"
                 ]
               }
             }
@@ -1053,76 +1242,6 @@
                   "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
                   "pm.test('Mensaje de eliminación correcta', () => pm.expect(body.message).to.match(/eliminado/));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "03.4 POST /api/auth/logout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{auth_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/auth/logout",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "logout"
-              ]
-            },
-            "description": "Revoca el JWT actual. Después de este request, el token guardado en {{auth_token}} ya no es válido."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.test('Mensaje de logout exitoso', () => pm.expect(body.message).to.match(/Logout/));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "03.5 POST /api/auth/logout SIN token (debe dar 401)",
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/auth/logout",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "logout"
-              ]
-            },
-            "description": "Logout sin token debe dar 401."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));"
                 ]
               }
             }

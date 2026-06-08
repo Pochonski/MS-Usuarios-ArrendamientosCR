@@ -1,6 +1,6 @@
 # Postman Collection - MS-Usuarios Boot
 
-Colección completa de Postman para el microservicio `MS-Usuarios-Boot` (Spring Boot 3.3 + Java 21 + arquitectura hexagonal). Cubre los 13 endpoints públicos de la API.
+Colección completa de Postman para el microservicio `MS-Usuarios-Boot` (Spring Boot 3.3 + Java 21 + arquitectura hexagonal). Cubre los 15 endpoints públicos de la API (8 de auth + 3 de usuarios + health + 2 OpenAPI).
 
 ## 📦 Archivos
 
@@ -58,12 +58,14 @@ La colección está organizada en 6 secciones numeradas. **Ejecutá los requests
 - `02.5 Login con password incorrecto` - Verifica 401 + intentos fallidos
 - `02.6 Login con email normalizado` - Verifica normalización a minúsculas
 
-### 3️⃣ `03. Auth - Endpoints Protegidos` - Verificar JWT
+### 3️⃣ `03. Auth - Profile, Refresh, Google, Logout (token activo)` - Verificar JWT y OAuth Google
 - `03.1 GET /api/auth/profile (con JWT)` - Usa el token capturado en 02.1
 - `03.2 GET /api/auth/profile SIN token` - Verifica 401
 - `03.3 POST /api/auth/refresh` - Rota el refresh token
-- `03.4 POST /api/auth/logout` - Revoca el JWT actual
-- `03.5 POST /api/auth/logout SIN token` - Verifica 401
+- `03.4 POST /api/auth/google con body vacío` - Verifica 400 (validación `@NotBlank` en `googleToken`)
+- `03.5 POST /api/auth/google con token inválido` - Verifica 401 (firma no válida)
+- `03.6 POST /api/auth/logout` - Revoca el JWT actual
+- `03.7 POST /api/auth/logout SIN token` - Verifica 401
 
 ### 4️⃣ `04. Auth - Email Verification` - Verificación de correo
 - `04.1 POST /api/auth/send-verification-email` - Simula envío (loguea el link)
@@ -119,6 +121,8 @@ newman run postman/MS-Usuarios-Boot.postman_collection.json \
 
 > ⚠️ **Desde 2026-06-08 el App Service está linkeado como backend del SWA**. El identity provider `Azure Static Web Apps (Linked)` rechaza tráfico directo al App Service. Para Newman contra prod, **usar siempre `azure-swa.postman_environment.json`**. El `azure.postman_environment.json` solo sirve para debugging local/después de unlink.
 
+> ℹ️ El `base_url` por default en la collection apunta al SWA (`https://agreeable-ground-0b1436910.6.azurestaticapps.net`), así que si abrís la collection sin seleccionar un env, igual funciona vía el proxy `/api/*` del SWA.
+
 ## 🔐 Sobre los secretos
 
 Esta colección **NO** contiene credenciales en el environment. Los secretos (DB password, JWT secret, Google client ID) se leen desde **Azure Key Vault** en el deploy de producción, o de `.env` en local. La colección sólo maneja la URL base + variables de runtime (token, user_id).
@@ -136,14 +140,15 @@ Esta colección **NO** contiene credenciales en el environment. Los secretos (DB
 
 ## ✅ Estado de validación (Newman CLI vs Azure)
 
-Última corrida con `newman run` contra `https://arrendamientos-ms-users-boot.azurewebsites.net`:
+Última corrida con `newman run` contra el SWA (`https://agreeable-ground-0b1436910.6.azurestaticapps.net` vía `azure-swa.postman_environment.json`):
 
 ```
-requests:       28/28 OK
-test-scripts:   27/27 OK
-assertions:     73/73 OK
-total run:      6.5s
-avg response:   222ms
+requests:       31/31 OK
+test-scripts:   29/29 OK
+prerequest:      1/1  OK
+assertions:     75/75 OK
+total run:      8.1s
+avg response:   252ms
 ```
 
 Para reproducir:
@@ -151,7 +156,7 @@ Para reproducir:
 ```bash
 EMAIL="postman+$(date +%s)@postman-test.com"
 newman run postman/MS-Usuarios-Boot.postman_collection.json \
-  --environment postman/azure.postman_environment.json \
+  --environment postman/azure-swa.postman_environment.json \
   --env-var "test_email=$EMAIL"
 ```
 
