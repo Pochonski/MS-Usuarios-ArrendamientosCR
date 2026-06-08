@@ -1,17 +1,65 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        # Preservar el case original de @Table(name="...") en vez de lowercasing
+        physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    open-in-view: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 3
+    locations: classpath:db/migration
+
+  datasource:
+    hikari:
+      connection-timeout: 30000
+      initialization-fail-timeout: 180000
+      maximum-pool-size: 10
+      minimum-idle: 2
+      validation-timeout: 10000
+
 app:
+  jwt:
+    secret: ${JWT_SECRET}
+  apim:
+    validate-client-cert: false
   security:
+    apim-filter-enabled: false
+    rate-limit-enabled: false
     endpoints-public:
       - /api/auth/login
       - /api/auth/registro
       - /api/auth/google
       - /api/auth/verify-email/**
       - /api/health
+      - /api/v3/api-docs/**
+      - /api/swagger-ui/**
+      - /api/swagger-ui.html
       - /v3/api-docs/**
       - /swagger-ui/**
       - /swagger-ui.html
       - /actuator/health
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+  health:
+    db:
+      enabled: true
+
 logging:
   level:
     root: INFO
     com.arrendamientos.usuarios: INFO
+    org.flywaydb: INFO

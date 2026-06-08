@@ -26,7 +26,11 @@ RUN curl -fsSL -o /app/applicationinsights-agent.jar \
     "https://github.com/microsoft/ApplicationInsights-Java/releases/download/${AI_AGENT_VERSION}/applicationinsights-agent-${AI_AGENT_VERSION}.jar" \
     && ls -la /app/applicationinsights-agent.jar
 
-COPY src/main/docker/applicationinsights.json /app/applicationinsights.json
+COPY src/main/docker/applicationinsights.json /app/applicationinsights.json.tpl
+ARG SERVICE_VERSION=1.0.4
+RUN sed -i "s|__SERVICE_VERSION__|${SERVICE_VERSION}|g" /app/applicationinsights.json.tpl \
+    && mv /app/applicationinsights.json.tpl /app/applicationinsights.json \
+    && cat /app/applicationinsights.json | grep service.version
 
 # Usuario no-root para runtime
 RUN groupadd --system app && useradd --system --gid app app

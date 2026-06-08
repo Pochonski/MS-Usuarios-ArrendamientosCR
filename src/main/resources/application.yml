@@ -120,6 +120,18 @@ management:
     application-insights:
       connection-string: ${APPLICATIONINSIGHTS_CONNECTION_STRING:}
 
+# SpringDoc / OpenAPI (W1.3)
+# Movido bajo /api/ para que sea accesible via el proxy del SWA.
+# El SWA proxia todo lo que matchea /api/* al App Service linkeado.
+springdoc:
+  api-docs:
+    path: /api/v3/api-docs
+  swagger-ui:
+    path: /api/swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+    display-request-duration: true
+
 logging:
   level:
     root: INFO

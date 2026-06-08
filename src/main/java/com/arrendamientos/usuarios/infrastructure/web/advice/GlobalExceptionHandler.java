@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -87,6 +88,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDto> handleIllegal(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponseDto.simple("BadRequest", ex.getMessage(), HttpStatus.BAD_REQUEST.value()));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponseDto> handleBadJson(HttpMessageNotReadableException ex) {
+        log.warn("JSON malformado: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponseDto.simple("BadRequest", "JSON malformado o cuerpo inválido", 400));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

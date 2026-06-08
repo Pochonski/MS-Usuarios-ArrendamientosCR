@@ -80,7 +80,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Iniciar sesión con email y contraseña")
+    @Operation(
+            summary = "Iniciar sesión con email y contraseña",
+            description = "Autentica al usuario y devuelve access token (24h) + refresh token (7d). " +
+                    "Después de 5 intentos fallidos la cuenta se bloquea por 15 minutos. " +
+                    "Si el usuario fue creado con Google OAuth, este endpoint retorna CredencialesInvalidasException."
+    )
     public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequest req) {
         AuthResult r = loginUseCase.login(new LoginCommand(
                 normalizar(req.correo()),
@@ -90,7 +95,12 @@ public class AuthController {
     }
 
     @PostMapping("/registro")
-    @Operation(summary = "Registrar un nuevo usuario")
+    @Operation(
+            summary = "Registrar un nuevo usuario",
+            description = "Crea una cuenta nueva con rol específico (DUENO o INQUILINO) y devuelve el par de tokens. " +
+                    "Si el correo ya existe, retorna 409 Conflict. El usuario creado puede loguearse inmediatamente; " +
+                    "el email de verificación se envía por separado vía /api/auth/send-verification-email."
+    )
     public ResponseEntity<LoginResponseDto> registro(@Valid @RequestBody RegistroRequest req) {
         AuthResult r = registrarUsuarioUseCase.registrar(new CreateUsuarioCommand(
                 req.nombre().trim(),
@@ -103,7 +113,12 @@ public class AuthController {
     }
 
     @PostMapping("/google")
-    @Operation(summary = "Iniciar sesión o registrarse con Google OAuth")
+    @Operation(
+            summary = "Iniciar sesión o registrarse con Google OAuth",
+            description = "Verifica el id_token contra Google, crea la cuenta si no existe, y devuelve JWT propio. " +
+                    "Si la cuenta ya existe con el mismo correo pero sin googleId, vincula automáticamente. " +
+                    "El 'hd' (hosted domain) filtra por dominio de Google Workspace si está configurado."
+    )
     public ResponseEntity<LoginResponseDto> google(@Valid @RequestBody GoogleLoginRequest req) {
         String hd = (properties.google().allowedDomain() == null || properties.google().allowedDomain().isBlank())
                 ? req.hd()
@@ -115,7 +130,10 @@ public class AuthController {
     }
 
     @GetMapping("/profile")
-    @Operation(summary = "Obtener perfil del usuario autenticado")
+    @Operation(
+            summary = "Obtener perfil del usuario autenticado",
+            description = "Devuelve los datos del usuario a partir del JWT en el header Authorization."
+    )
     public ResponseEntity<UsuarioResponseDto> profile(@AuthenticationPrincipal AuthenticatedUser user) {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -126,7 +144,12 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    @Operation(summary = "Refrescar token de acceso")
+    @Operation(
+            summary = "Refrescar token de acceso",
+            description = "Genera un nuevo access token a partir del refresh token. " +
+                    "El refresh token puede enviarse en el body como 'refreshToken' o en el header 'X-Refresh-Token'. " +
+                    "Si el JTI fue revocado (logout), retorna 401."
+    )
     public ResponseEntity<LoginResponseDto> refresh(
             @AuthenticationPrincipal AuthenticatedUser user,
             @RequestBody(required = false) Map<String, Object> body,
@@ -149,7 +172,11 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Cerrar sesión y revocar token")
+    @Operation(
+            summary = "Cerrar sesión y revocar token",
+            description = "Revoca el JTI del access token actual, agregándolo a la tabla TokensRevocados. " +
+                    "El token queda inválido inmediatamente (incluso antes de su expiración natural)."
+    )
     public ResponseEntity<Map<String, String>> logout(
             @AuthenticationPrincipal AuthenticatedUser user,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -175,7 +202,11 @@ public class AuthController {
     }
 
     @GetMapping("/verify-email/{token}")
-    @Operation(summary = "Verificar email con token")
+    @Operation(
+            summary = "Verificar email con token",
+            description = "Endpoint público (no requiere JWT) que valida un token de verificación de email. " +
+                    "El frontend redirige al usuario acá cuando hace click en el link del email de verificación."
+    )
     public ResponseEntity<Map<String, String>> verifyEmail(@PathVariable String token) {
         VerificarEmailUseCase.Resultado r = verificarEmailUseCase.verificar(token);
         Map<String, String> resp = new LinkedHashMap<>();
@@ -186,7 +217,12 @@ public class AuthController {
     }
 
     @PostMapping("/send-verification-email")
-    @Operation(summary = "Reenviar email de verificación")
+    @Operation(
+            summary = "Reenviar email de verificación",
+            description = "Genera un nuevo token de verificación y envía (o simula el envío en dev) " +
+                    "un email al usuario autenticado con el link de verificación. " +
+                    "Rate limit: ver RateLimitFilter."
+    )
     public ResponseEntity<Map<String, String>> sendVerificationEmail(@AuthenticationPrincipal AuthenticatedUser user) {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
