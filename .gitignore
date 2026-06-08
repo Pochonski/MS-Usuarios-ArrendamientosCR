@@ -1,0 +1,93 @@
+# ===== Compilados / Build =====
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+hs_err_pid*
+replay_pid*
+
+# ===== Maven =====
+.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+# ===== IDE =====
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+.factorypath
+.apt_generated/
+.springBeans
+.sts4-cache/
+bin/
+nbproject/private/
+nbbuild/
+nbdist/
+.nb-gradle/
+
+# ===== Sistema Operativo =====
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# ===== Logs =====
+*.log
+logs/
+spring.log
+spring.log.*
+
+# ===== Variables de entorno (NUNCA subir secretos) =====
+.env
+.env.*
+!.env.example
+
+# ===== Spring Boot =====
+HELP.md
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# ===== Cobertura / Reportes =====
+target/site/
+target/surefire-reports/
+target/jacoco/
+target/coverage/
+coverage/
+*.lcov
+.nyc_output/
+
+# ===== Tests / Contract tests outputs =====
+contract-tests/build/
+contract-tests/target/
+contract-tests/node_modules/
+contract-tests/coverage/
+contract-tests/.env
+
+# ===== Docker =====
+.docker-volumes/
+docker-compose.override.yml
+
+# ===== Azure / Cloud local =====
+.azure/
+*.publishsettings
+*.user
+*.suo
+*.userprefs
+
+# ===== Misc =====
+*.swp
+*.swo
+*~
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache

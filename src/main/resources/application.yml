@@ -1,0 +1,129 @@
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+  error:
+    include-message: always
+    include-binding-errors: always
+
+spring:
+  application:
+    name: ms-usuarios-boot
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+  datasource:
+    url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:usuarios_db};encrypt=true;trustServerCertificate=true
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 1
+      idle-timeout: 60000
+      connection-timeout: 15000
+      validation-timeout: 5000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+        format_sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 2
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+    expires-in: ${JWT_EXPIRES_IN:24h}
+    refresh-expires-in: 7d
+    email-verification-expires-in: 24h
+  apim:
+    subscription-key: ${APIM_SUBSCRIPTION_KEY:}
+    client-cert-thumbprint: ${APIM_CLIENT_CERT_THUMBPRINT:}
+    validate-client-cert: ${APIM_VALIDATE_CLIENT_CERT:false}
+    internal-api-url: ${APIM_INTERNAL_API_URL:}
+    skip-paths:
+      - /api/health
+      - /actuator/**
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    allowed-domain: ${GOOGLE_ALLOWED_DOMAIN:}
+  email-verification:
+    frontend-base-url: ${EMAIL_VERIFICATION_FRONTEND_URL:https://agreeable-ground-0b1436910.6.azurestaticapps.net}
+  rate-limit:
+    window-minutes: ${RL_WINDOW_MINUTES:15}
+    auth-max: ${RL_AUTH_MAX:5}
+    read-max: ${RL_READ_MAX:200}
+    write-max: ${RL_WRITE_MAX:50}
+    general-max: ${RL_GENERAL_MAX:100}
+  cors:
+    allowed-origins:
+      - https://agreeable-ground-0b1436910.6.azurestaticapps.net
+  lockout:
+    max-attempts: 5
+    duration-minutes: 15
+  token-revocation:
+    cleanup-after-days: 7
+  bcrypt:
+    strength: 10
+  security:
+    endpoints-public:
+      - /api/auth/login
+      - /api/auth/registro
+      - /api/auth/google
+      - /api/auth/verify-email/**
+      - /api/health
+      - /api/docs
+      - /api/docs/**
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /swagger-ui.html
+      - /actuator/health
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+  health:
+    db:
+      enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.9, 0.95, 0.99
+    tags:
+      application: ${spring.application.name}
+      environment: ${spring.profiles.active:dev}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  # Application Insights: requiere el profile `azure-insights` y la variable
+  # APPLICATIONINSIGHTS_CONNECTION_STRING. Ver README sección "Observabilidad".
+  azure:
+    application-insights:
+      connection-string: ${APPLICATIONINSIGHTS_CONNECTION_STRING:}
+
+logging:
+  level:
+    root: INFO
+    com.arrendamientos.usuarios: INFO
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{requestId:-}] %logger{36} - %msg%n"

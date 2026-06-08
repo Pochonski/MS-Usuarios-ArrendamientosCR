@@ -1,0 +1,311 @@
+{
+  "info": {
+    "name": "MS-Usuarios - Paridad Node vs Spring Boot",
+    "_postman_id": "ms-usuarios-paridad-2026",
+    "description": "Tests de contrato que validan que el servicio Spring Boot expone la misma API HTTP que el servicio Node original. Compara respuestas JSON de ambos servicios.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Health check",
+      "item": [
+        {
+          "name": "GET /api/health debe responder 200 con estado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body tiene campo status', () => pm.expect(body).to.have.property('status'));",
+                  "pm.test('Body tiene timestamp', () => pm.expect(body).to.have.property('timestamp'));",
+                  "pm.test('Body tiene database.status', () => pm.expect(body.database).to.have.property('status'));",
+                  "pm.test('Body tiene google.configured', () => pm.expect(body.google).to.have.property('configured'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Registro de usuario",
+      "item": [
+        {
+          "name": "POST /api/auth/registro con datos válidos",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.variables.set('random_correo', 'test+' + Date.now() + '@example.com');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nombre\":\"Contract Test\",\"correo\":\"{{random_correo}}\",\"contrasena\":\"Password123!\",\"rol\":\"dueno\",\"telefono\":\"+50688888888\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/registro",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "registro"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body tiene token', () => pm.expect(body).to.have.property('token'));",
+                  "pm.test('Body tiene refreshToken', () => pm.expect(body).to.have.property('refreshToken'));",
+                  "pm.test('Body tiene usuario.id con formato usr-XXX', () => pm.expect(body.usuario.id).to.match(/^usr-\\d+$/));",
+                  "pm.test('Body NO expone contrasenaHash', () => {",
+                  "  const json = JSON.stringify(body);",
+                  "  pm.expect(json).to.not.include('contrasenaHash');",
+                  "  pm.expect(json).to.not.include('ContrasenaHash');",
+                  "});",
+                  "pm.variables.set('auth_token', body.token);",
+                  "pm.variables.set('user_id', body.usuario.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/registro con correo duplicado debe dar 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nombre\":\"Dup\",\"correo\":\"{{random_correo}}\",\"contrasena\":\"Password123!\",\"rol\":\"dueno\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/registro",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "registro"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));",
+                  "const body = pm.response.json();",
+                  "pm.test('Mensaje indica correo ya registrado', () => pm.expect(body.message).to.include('ya est'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/registro con contraseña corta debe dar 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nombre\":\"X\",\"correo\":\"x@e.com\",\"contrasena\":\"123\",\"rol\":\"dueno\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/registro",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "registro"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Error es Validation Error', () => pm.expect(body.error).to.equal('Validation Error'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Login",
+      "item": [
+        {
+          "name": "POST /api/auth/login con credenciales correctas",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"correo\":\"{{random_correo}}\",\"contrasena\":\"Password123!\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body tiene token', () => pm.expect(body).to.have.property('token'));",
+                  "pm.test('Body tiene usuario.id con formato usr-XXX', () => pm.expect(body.usuario.id).to.match(/^usr-\\d+$/));",
+                  "pm.variables.set('auth_token', body.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/login con contraseña incorrecta debe dar 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"correo\":\"{{random_correo}}\",\"contrasena\":\"WRONG\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body tiene intentosFallidos', () => pm.expect(body).to.have.property('intentosFallidos'));",
+                  "pm.test('Body tiene intentosRestantes', () => pm.expect(body).to.have.property('intentosRestantes'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Endpoints protegidos",
+      "item": [
+        {
+          "name": "GET /api/auth/profile sin token debe dar 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/auth/profile con token válido debe dar 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body.id coincide con usuario creado', () => pm.expect(body.id).to.equal(pm.variables.get('user_id')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/usuarios con token válido debe dar 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuarios?page=1&limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body tiene data (array)', () => pm.expect(body.data).to.be.an('array'));",
+                  "pm.test('Body tiene pagination', () => pm.expect(body.pagination).to.have.property('page'));",
+                  "pm.test('Body tiene pagination.total', () => pm.expect(body.pagination).to.have.property('total'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    }
+  ]
+}

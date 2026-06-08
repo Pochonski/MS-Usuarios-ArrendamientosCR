@@ -1,0 +1,23 @@
+app:
+  jwt:
+    secret: test_secret_for_jest_12345678901234567890
+    expires-in: 1h
+    refresh-expires-in: 7d
+    email-verification-expires-in: 24h
+  apim:
+    validate-client-cert: false
+  google:
+    client-id: test-google-client-id
+  security:
+    endpoints-public:
+      - /api/auth/**
+      - /api/health
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /swagger-ui.html
+      - /actuator/**
+
+logging:
+  level:
+    root: WARN
+    com.arrendamientos.usuarios: INFO

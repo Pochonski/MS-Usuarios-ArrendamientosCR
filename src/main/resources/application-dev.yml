@@ -1,0 +1,22 @@
+app:
+  security:
+    endpoints-public:
+      - /api/auth/**
+      - /api/health
+      - /api/docs
+      - /api/docs/**
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /swagger-ui.html
+      - /actuator/**
+  apim:
+    validate-client-cert: false
+  cors:
+    allowed-origins:
+      - "*"
+
+logging:
+  level:
+    root: DEBUG
+    com.arrendamientos.usuarios: DEBUG
+    org.hibernate.SQL: DEBUG

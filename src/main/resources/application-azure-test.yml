@@ -1,0 +1,39 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        # Preservar el case original de @Table(name="...") en vez de lowercasing
+        physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 3
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  apim:
+    validate-client-cert: false
+    skip-paths:
+      - /api/health
+      - /actuator/**
+  security:
+    apim-filter-enabled: false
+    rate-limit-enabled: false
+    endpoints-public:
+      - /api/auth/**
+      - /api/health
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /swagger-ui.html
+      - /actuator/**
+
+logging:
+  level:
+    root: INFO
+    com.arrendamientos.usuarios: INFO
+    org.flywaydb: INFO

@@ -1,0 +1,17 @@
+app:
+  security:
+    endpoints-public:
+      - /api/auth/login
+      - /api/auth/registro
+      - /api/auth/google
+      - /api/auth/verify-email/**
+      - /api/health
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /swagger-ui.html
+      - /actuator/health
+
+logging:
+  level:
+    root: INFO
+    com.arrendamientos.usuarios: INFO

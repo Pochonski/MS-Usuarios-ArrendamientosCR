@@ -1,0 +1,77 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:msusuariostest;DB_CLOSE_DELAY=-1;MODE=MSSQLServer
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+  flyway:
+    enabled: false
+  main:
+    banner-mode: off
+
+server:
+  port: 0
+
+app:
+  jwt:
+    secret: test_secret_for_jest_12345678901234567890
+    expires-in: 1h
+    refresh-expires-in: 7d
+    email-verification-expires-in: 24h
+  apim:
+    subscription-key: test-subscription-key
+    client-cert-thumbprint: ""
+    validate-client-cert: false
+    internal-api-url: ""
+    skip-paths:
+      - /api/health
+      - /actuator/**
+  google:
+    client-id: test-google-client-id
+    allowed-domain: ""
+  email-verification:
+    frontend-base-url: http://localhost:3000
+  rate-limit:
+    window-minutes: 15
+    auth-max: 5
+    read-max: 200
+    write-max: 50
+    general-max: 100
+  cors:
+    allowed-origins:
+      - "*"
+  lockout:
+    max-attempts: 5
+    duration-minutes: 15
+  token-revocation:
+    cleanup-after-days: 7
+  bcrypt:
+    strength: 4
+  security:
+    endpoints-public:
+      - /api/auth/login
+      - /api/auth/registro
+      - /api/auth/google
+      - /api/auth/verify-email/**
+      - /api/health
+      - /api/docs
+      - /api/docs/**
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /swagger-ui.html
+      - /actuator/**
+    apim-filter-enabled: false
+    rate-limit-enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.arrendamientos.usuarios: INFO
+    org.hibernate.SQL: WARN
