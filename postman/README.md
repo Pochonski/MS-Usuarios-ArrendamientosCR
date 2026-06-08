@@ -58,14 +58,12 @@ La colección está organizada en 6 secciones numeradas. **Ejecutá los requests
 - `02.5 Login con password incorrecto` - Verifica 401 + intentos fallidos
 - `02.6 Login con email normalizado` - Verifica normalización a minúsculas
 
-### 3️⃣ `03. Auth - Profile, Refresh, Google, Logout (token activo)` - Verificar JWT y OAuth Google
+### 3️⃣ `03. Auth - Profile, Refresh, Google (token activo)` - Verificar JWT y OAuth Google
 - `03.1 GET /api/auth/profile (con JWT)` - Usa el token capturado en 02.1
 - `03.2 GET /api/auth/profile SIN token` - Verifica 401
 - `03.3 POST /api/auth/refresh` - Rota el refresh token
 - `03.4 POST /api/auth/google con body vacío` - Verifica 400 (validación `@NotBlank` en `googleToken`)
-- `03.5 POST /api/auth/google con token inválido` - Verifica 401 (firma no válida)
-- `03.6 POST /api/auth/logout` - Revoca el JWT actual
-- `03.7 POST /api/auth/logout SIN token` - Verifica 401
+- `03.5 POST /api/auth/google con token inválido` - Verifica 400 (Google verifier throws `IllegalArgumentException`)
 
 ### 4️⃣ `04. Auth - Email Verification` - Verificación de correo
 - `04.1 POST /api/auth/send-verification-email` - Simula envío (loguea el link)
@@ -89,8 +87,12 @@ La colección está organizada en 6 secciones numeradas. **Ejecutá los requests
 - `06.3 POST /api/auth/github con code inválido` - Verifica 400 (el adapter tira `IllegalArgumentException` cuando GitHub rechaza el code)
 
 ### 7️⃣ `07. OpenAPI / Swagger` - Documentación auto-generada
-- `07.1 OpenAPI 3 JSON spec` - `/v3/api-docs`
-- `07.2 Swagger UI` - `/swagger-ui.html`
+- `07.1 OpenAPI 3 JSON spec` - `/api/v3/api-docs` (bajo `/api/` para que el SWA proxy lo sirva)
+- `07.2 Swagger UI` - `/api/swagger-ui.html`
+
+### 8️⃣ `08. Cleanup - Logout` (⚠️ ejecutar al final del flujo)
+- `08.1 POST /api/auth/logout` - ⚠️ **Revoca el `{{auth_token}}` principal**. Es el ÚLTIMO request del flujo. Después de ejecutarlo, el token queda en la tabla de revocados — si querés re-ejecutar la collection, tenés que volver a 02.1 (registro) o 02.4 (login) para obtener uno nuevo.
+- `08.2 POST /api/auth/logout SIN token` - Verifica 401 (independiente de 08.1, no necesita token)
 
 ## 🧪 Ejecutar toda la colección (CLI)
 

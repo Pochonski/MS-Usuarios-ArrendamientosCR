@@ -446,7 +446,7 @@
       ]
     },
     {
-      "name": "03. Auth - Profile, Refresh, Google, Logout (token activo)",
+      "name": "03. Auth - Profile, Refresh, Google (token activo)",
       "item": [
         {
           "name": "03.1 GET /api/auth/profile (con JWT)",
@@ -662,102 +662,6 @@
                   "pm.test('Status 400 (token Google inválido)', () => pm.response.to.have.status(400));",
                   "const body = pm.response.json();",
                   "pm.test('Mensaje indica token de Google inválido', () => pm.expect(JSON.stringify(body).toLowerCase()).to.match(/google|inválid/));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "03.6 POST /api/auth/logout (con JWT fresco, aislado)",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// Prerequest: hacer login fresh con el mismo correo registrado en 02.1.",
-                  "// La password registrada es 'Password123!' (mismo password que 02.1).",
-                  "// Guardamos el token en {{logout_token}} (variable separada) para no tocar {{auth_token}}.",
-                  "const loginReq = {",
-                  "  url: pm.environment.get('base_url') + '/api/auth/login',",
-                  "  method: 'POST',",
-                  "  header: { 'Content-Type': 'application/json' },",
-                  "  body: { mode: 'raw', raw: JSON.stringify({ correo: pm.environment.get('test_email'), contrasena: 'Password123!' }) }",
-                  "};",
-                  "pm.sendRequest(loginReq, (err, res) => {",
-                  "  if (err) { console.error('Prerequest login failed', err); return; }",
-                  "  if (res.code !== 200) { console.error('Prerequest login status', res.code, res.text()); return; }",
-                  "  const body = res.json();",
-                  "  pm.environment.set('logout_token', body.token);",
-                  "});"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.test('Mensaje de logout exitoso', () => pm.expect(body.message).to.match(/Logout/));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "auth": {
-              "type": "noauth"
-            },
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{logout_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/auth/logout",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "logout"
-              ]
-            },
-            "description": "Revoca el JWT que el prerequest acaba de capturar en {{logout_token}}. El request usa noauth a nivel header para que el Bearer {{auth_token}} de la collection-level no se filtre y revoque el token principal que usan los tests 04.1 y 05.x."
-          }
-        },
-        {
-          "name": "03.7 POST /api/auth/logout SIN token (debe dar 401)",
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/auth/logout",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "logout"
-              ]
-            },
-            "description": "Logout sin token debe dar 401."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));"
                 ]
               }
             }
@@ -1493,6 +1397,82 @@
                   "  const isSpaShell = body.includes('Plataforma de Arrendamientos CR') && body.includes('/assets/index-');",
                   "  pm.expect(isSpaShell, 'Response es el shell de la SPA, no Swagger UI').to.equal(false);",
                   "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08. Cleanup - Logout (ejecutar al final)",
+      "item": [
+        {
+          "name": "08.1 POST /api/auth/logout (con auth_token principal, ejecutar al final)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Mensaje de logout exitoso', () => pm.expect(body.message).to.match(/Logout/));",
+                  "pm.test('Body NO expone contrasenaHash', () => pm.expect(JSON.stringify(body)).to.not.include('contrasenaHash'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Revoca el {{auth_token}} principal. ATENCION: ESTE REQUEST ES EL ULTIMO DEL FLUJO -- despues de ejecutarlo, todos los tests que dependan de {{auth_token}} van a fallar con 401 porque el token queda en la lista de revocados. Si queres re-ejecutar la collection, tenes que empezar desde 02.1 (registro) o 02.4 (login) de nuevo para obtener un token fresco."
+          }
+        },
+        {
+          "name": "08.2 POST /api/auth/logout SIN token (debe dar 401)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Logout sin token debe dar 401. Este test es independiente de 08.1 (no necesita token porque la request no manda Authorization). Util para confirmar que el endpoint rechaza requests anonimos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));"
                 ]
               }
             }
