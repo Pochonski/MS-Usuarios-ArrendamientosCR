@@ -130,7 +130,7 @@ newman run postman/MS-Usuarios-Boot.postman_collection.json \
 
 > ℹ️ **Variable `test_email`**: los 4 environments (`azure-swa`, `azure`, `local`, `node`) tienen un valor default `postman+manual@postman-test.com`. Si corrés la collection en **Postman UI** sin cambiarlo, vas a usar ese email — si ya existe en la BD, el 02.2 va a fallar con 409 (esperado) y 02.4 va a tirar 401 hasta que cambies `test_email` a algo único. Los tests 02.1/02.2/02.4/02.5 tienen un guard que falla con mensaje claro si `test_email` está vacío.
 
-> ℹ️ El `base_url` por default en la collection apunta al SWA (`https://agreeable-ground-0b1436910.6.azurestaticapps.net`), así que si abrís la collection sin seleccionar un env, igual funciona vía el proxy `/api/*` del SWA.
+> ℹ️ El `base_url` por default en la collection apunta al SWA (`https://agreeable-ground-0b1436910.6.azurestaticapps.net`), así que si abrís la collection sin seleccionar un env, igual funciona vía el proxy `/api/*` del SWA. El item 00. Info (README) tiene un guard que falla con mensaje claro si el env activo no tiene `base_url` configurado.
 
 ## 🔐 Sobre los secretos
 
@@ -141,6 +141,7 @@ Esta colección **NO** contiene credenciales en el environment. Los secretos (DB
 | Error | Causa probable | Solución |
 |-------|----------------|----------|
 | 401 en todo | Token expirado o no capturado | Re-ejecutar `02.1` (captura token nuevo) o `02.4` |
+| `getaddrinfo ENOTFOUND {{baseurl}}` (Postman UI) | El env activo no tiene `base_url` seteado o no se activó el env | Verificar que el dropdown de envs en Postman muestra "MS-Usuarios Boot - Azure (vía SWA proxy)". Si dice "No environment", click y elegir el env. Si el env no aparece en la lista, importar de nuevo `postman/azure-swa.postman_environment.json`. El README item (00. Info) tiene un guard que falla con instrucciones claras si detecta este problema. |
 | 404 en /api/usuario/{id} | `user_id` variable vacía | Re-ejecutar `02.1` primero |
 | 403 en 05.6/05.7 | Estás editando otro usuario | Solo podés editar `{{user_id}}` (tu propio perfil) |
 | 429 en login | Demasiados intentos fallidos | Esperar 15 min o usar otro correo |
