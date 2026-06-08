@@ -29,6 +29,7 @@
         <logstash.encoder.version>8.0</logstash.encoder.version>
         <testcontainers.version>1.20.3</testcontainers.version>
         <azure.monitor.version>1.3.0</azure.monitor.version>
+        <azure.communication.email.version>1.0.21</azure.communication.email.version>
     </properties>
 
     <dependencies>
@@ -177,6 +178,13 @@
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Azure Communication Services Email (Ola 2: envío real de emails) -->
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-communication-email</artifactId>
+            <version>${azure.communication.email.version}</version>
         </dependency>
     </dependencies>
 

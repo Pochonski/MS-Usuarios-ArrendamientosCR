@@ -87,6 +87,13 @@ app:
       - /swagger-ui/**
       - /swagger-ui.html
       - /actuator/health
+  # Ola 2: email real con Azure Communication Services
+  # provider: 'azure-comm' usa ACS (producción), 'logging' solo loguea (dev/test)
+  email:
+    provider: ${EMAIL_PROVIDER:logging}
+    connection-string: ${AZURE_COMM_CONNECTION_STRING:}
+    from-address: ${AZURE_COMM_FROM_ADDRESS:DoNotReply@azurecomm.net}
+    from-display-name: ${AZURE_COMM_FROM_NAME:Plataforma de Arrendamientos CR}
 
 management:
   endpoints:

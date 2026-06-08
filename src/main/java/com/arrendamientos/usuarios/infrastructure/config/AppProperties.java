@@ -21,7 +21,8 @@ public record AppProperties(
         Lockout lockout,
         TokenRevocation tokenRevocation,
         Bcrypt bcrypt,
-        Security security
+        Security security,
+        Email email
 ) {
 
     public record Jwt(
@@ -75,5 +76,12 @@ public record AppProperties(
 
     public record Security(
             @NotEmpty List<String> endpointsPublic
+    ) {}
+
+    public record Email(
+            @NotBlank String provider,
+            String connectionString,
+            @NotBlank String fromAddress,
+            String fromDisplayName
     ) {}
 }

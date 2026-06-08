@@ -86,7 +86,8 @@ class UsuarioServiceTest {
                 new AppProperties.Lockout(5, 15),
                 new AppProperties.TokenRevocation(7),
                 new AppProperties.Bcrypt(10),
-                new AppProperties.Security(List.of())
+                new AppProperties.Security(List.of()),
+                new AppProperties.Email("logging", "", "test@example.com", "Test")
         );
         service = new UsuarioService(usuarios, tokensRevocados, passwordEncoder, tokenProvider, googleVerifier, sequenceGenerator, properties, new AuthMetrics(new SimpleMeterRegistry()));
 

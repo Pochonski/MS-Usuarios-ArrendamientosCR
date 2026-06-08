@@ -50,7 +50,8 @@ class GoogleTokenVerifierWireMockIT {
                 null,
                 new AppProperties.Google("test-google-client-id", ""),
                 null, null, null, null, null, null,
-                new AppProperties.Security(List.of())
+                new AppProperties.Security(List.of()),
+                new AppProperties.Email("logging", "", "test@example.com", "Test")
         );
         // Aunque apuntemos a WireMock, GoogleIdTokenVerifier.fetchKeys() falla porque
         // no proveemos JWKS válido. Capturamos para validar el flujo de inicialización.
@@ -72,7 +73,8 @@ class GoogleTokenVerifierWireMockIT {
                 null,
                 new AppProperties.Google("", ""),
                 null, null, null, null, null, null,
-                new AppProperties.Security(List.of())
+                new AppProperties.Security(List.of()),
+                new AppProperties.Email("logging", "", "test@example.com", "Test")
         );
         GoogleTokenVerifierAdapter adapter = new GoogleTokenVerifierAdapter(props);
         // El método init es @PostConstruct y requiere clientId no vacío

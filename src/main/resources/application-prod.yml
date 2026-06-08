@@ -43,6 +43,9 @@ app:
       - /swagger-ui/**
       - /swagger-ui.html
       - /actuator/health
+  # Ola 2: en prod, emails van por Azure Communication Services
+  email:
+    provider: azure-comm
 
 management:
   endpoints:
