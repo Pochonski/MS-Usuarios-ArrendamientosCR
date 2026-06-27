@@ -6,6 +6,8 @@ app:
       - /api/auth/google
       - /api/auth/github
       - /api/auth/verify-email/**
+      - /api/propiedades
+      - /api/propiedades/**
       - /api/health
       - /api/v3/api-docs/**
       - /api/swagger-ui/**

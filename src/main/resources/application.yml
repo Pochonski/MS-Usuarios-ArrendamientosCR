@@ -85,6 +85,8 @@ app:
       - /api/auth/google
       - /api/auth/github
       - /api/auth/verify-email/**
+      - /api/propiedades
+      - /api/propiedades/**
       - /api/health
       - /api/docs
       - /api/docs/**

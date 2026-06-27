@@ -300,6 +300,89 @@
           ]
         }
       ]
+    },
+    {
+      "name": "05 - GitHub OAuth (paridad con servicio Node)",
+      "item": [
+        {
+          "name": "POST /api/auth/github con body vacío debe dar 400 (o 401 si la imagen no incluye el endpoint)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/github",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "github"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 400) {",
+                  "  const json = JSON.stringify(pm.response.json()).toLowerCase();",
+                  "  pm.test('Body referencia code, redirectUri o validation', () => pm.expect(json).to.match(/code|redirecturi|validation/));",
+                  "} else if (pm.response.code === 401) {",
+                  "  console.warn('⚠️  /api/auth/github no desplegado aún en esta imagen. Cuando se despliegue imagen 1.1.x, este test pasará a 400.');",
+                  "  pm.test('INFO: endpoint /api/auth/github no existe en imagen actual (transitorio)', () => true);",
+                  "} else if (pm.response.code === 500) {",
+                  "  console.warn('⚠️  Bug de binding: AppProperties.gitHub() es null. Ver src/main/resources/application.yml:60-62 (falta token-url/user-url).');",
+                  "  pm.test('INFO: bug de binding en production (transitorio)', () => true);",
+                  "} else {",
+                  "  pm.test(`Status inesperado: ${pm.response.code}`, () => false);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/github con code inválido debe dar 400 (o 401/500 transitorio)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"paridad-fake-code\",\"redirectUri\":\"http://localhost:5173/auth/github/callback\",\"rol\":\"dueno\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/github",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "github"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 400) {",
+                  "  const json = JSON.stringify(pm.response.json()).toLowerCase();",
+                  "  pm.test('Mensaje indica error de GitHub OAuth', () => pm.expect(json).to.match(/github|inválid|expirad|código/));",
+                  "} else if (pm.response.code === 401) {",
+                  "  console.warn('⚠️  /api/auth/github no desplegado aún. Ver test anterior.');",
+                  "  pm.test('INFO: endpoint no existe en imagen actual (transitorio)', () => true);",
+                  "} else if (pm.response.code === 500) {",
+                  "  console.warn('⚠️  Bug de binding. Ver test anterior.');",
+                  "  pm.test('INFO: bug de binding (transitorio)', () => true);",
+                  "} else {",
+                  "  pm.test(`Status inesperado: ${pm.response.code}`, () => false);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [

@@ -11,7 +11,17 @@ app:
   security:
     endpoints-public:
       - /api/auth/**
+      - /api/auth/login
+      - /api/auth/registro
+      - /api/auth/google
+      - /api/auth/github
+      - /api/auth/verify-email/**
+      - /api/propiedades
+      - /api/propiedades/**
       - /api/health
+      - /api/docs
+      - /api/docs/**
+      - /api/v3/api-docs
       - /api/v3/api-docs/**
       - /api/swagger-ui/**
       - /api/swagger-ui.html
